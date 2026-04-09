@@ -1,0 +1,62 @@
+[
+  {
+    "id": 1,
+    "description": "[Sprint 1] Setup inicial del proyecto React + Spring Boot",
+    "done": true,
+    "createdAt": "2026-04-01T10:00:00"
+  },
+  {
+    "id": 2,
+    "description": "[Sprint 1] Configurar conexión básica frontend-backend",
+    "done": true,
+    "createdAt": "2026-04-01T12:30:00"
+  },
+  {
+    "id": 3,
+    "description": "[Sprint 2] Implementar endpoint GET /todolist",
+    "done": true,
+    "createdAt": "2026-04-02T09:15:00"
+  },
+  {
+    "id": 4,
+    "description": "[Sprint 2] Mostrar lista de tareas en React",
+    "done": false,
+    "createdAt": "2026-04-02T14:20:00"
+  },
+  {
+    "id": 5,
+    "description": "[Sprint 3] Implementar creación de tareas (POST)",
+    "done": false,
+    "createdAt": "2026-04-03T11:00:00"
+  },
+  {
+    "id": 6,
+    "description": "[Sprint 3] Agregar funcionalidad de marcar como done",
+    "done": false,
+    "createdAt": "2026-04-03T15:45:00"
+  },
+  {
+    "id": 7,
+    "description": "[Sprint 4] Implementar eliminación de tareas (DELETE)",
+    "done": false,
+    "createdAt": "2026-04-04T10:10:00"
+  },
+  {
+    "id": 8,
+    "description": "[Sprint 4] Mejorar UI con Material UI",
+    "done": false,
+    "createdAt": "2026-04-04T16:30:00"
+  },
+  {
+    "id": 9,
+    "description": "[Sprint 5] Dockerizar aplicación completa",
+    "done": false,
+    "createdAt": "2026-04-05T13:00:00"
+  },
+  {
+    "id": 10,
+    "description": "[Sprint 5] Automatizar build con script PowerShell",
+    "done": false,
+    "createdAt": "2026-04-05T18:20:00"
+  }
+]

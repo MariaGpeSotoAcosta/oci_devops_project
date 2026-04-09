@@ -49,3 +49,46 @@ frontend/npm-debug.log*
 frontend/yarn-debug.log*
 frontend/yarn-error.log*
 /MtdrSpring/backend/wallet
+
+**/node_modules/**
+**/build/**
+**/target/**
+
+# =========================
+# Sensitive configuration
+# =========================
+application.properties
+**/application.properties
+
+
+# =========================
+# Wallet files (e.g., Oracle Wallet)
+# =========================
+wallet/
+**/wallet/
+*.sso
+*.jks
+*.p12
+*.pem
+*.key
+*.crt
+
+# =========================
+# Docker files (if you don't want to include them)
+# =========================
+DockerfileDev
+Dockerfile.*
+docker-compose.yml
+docker-compose.yaml
+
+# =========================
+# Environment variables
+# =========================
+.env
+.env.*
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log

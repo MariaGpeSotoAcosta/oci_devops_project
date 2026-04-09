@@ -6,7 +6,7 @@
 */
 body {
     /* from the redwood theme */
-    background-color: #3A3632;
+    background-color: #000;
     width: 100%;
     max-width: 50rem;
     margin: 0 auto;
@@ -17,7 +17,7 @@ body {
     -moz-osx-font-smoothing: grayscale;
   }
   .App {
-    background: #201E1C;
+    background: #3A35;
     color: #FEF9F2;
     display: flex;
     flex-direction: column;
@@ -117,7 +117,7 @@ body {
     background-color: #5F7D4F;
   }
   button.AddButton:hover {
-    background-color: #6F915D;
+    background-color: #6F91;
   }
   button.DeleteButton {
     color: #FEF9F2;

@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp -r \"c:/Github/oci_devops_project1/FRONTEND/app\" \"c:/Github/oci_devops_project1/MtdrSpring/backend/src/main/frontend/app\")",
+      "Bash(cp -r \"c:/Github/oci_devops_project1/FRONTEND/styles\" \"c:/Github/oci_devops_project1/MtdrSpring/backend/src/main/frontend/styles\")"
+    ]
+  }
+}
