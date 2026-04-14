@@ -40,3 +40,4 @@ docker-compose.yaml
 # =========================
 logs/
 *.log
+logs.log*

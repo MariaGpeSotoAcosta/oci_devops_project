@@ -20,9 +20,9 @@ const navigation = [
   { name: 'Projects', href: '/projects', icon: Layers },
   { name: 'Teams', href: '/teams', icon: Users },
   { name: 'Board', href: '/board', icon: LayoutGrid },
-  { name: 'Backlog', href: '/backlog', icon: ListTodo },
-  { name: 'Calendar', href: '/calendar', icon: Calendar },
-  { name: 'AI Chatbot', href: '/chatbot', icon: MessageCircle },
+  // { name: 'Backlog', href: '/backlog', icon: ListTodo },
+  // { name: 'Calendar', href: '/calendar', icon: Calendar },
+  // { name: 'AI Chatbot', href: '/chatbot', icon: MessageCircle },
 ];
 
 export function Sidebar() {
