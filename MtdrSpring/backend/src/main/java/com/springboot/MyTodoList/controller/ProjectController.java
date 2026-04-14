@@ -128,7 +128,7 @@ public class ProjectController {
         try {
             projectService.deleteProject(userId, id);
             log.info("✅ [SUCCESS] DELETE /projects/{} - Project deleted successfully", id);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
             log.error("❌ [ERROR] DELETE /projects/{} - Delete failed for user {}: {}", id, userId, e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();

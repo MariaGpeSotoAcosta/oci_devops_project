@@ -18,8 +18,10 @@ public class TaskDTO {
     private String projectId;
     private List<String> tags;
     private List<CommentDTO> comments;
+    private Integer workedHours;
     private String createdAt;
     private String updatedAt;
+    private String completedAt;
     private String createdBy;
 
     public TaskDTO() {}
@@ -40,8 +42,10 @@ public class TaskDTO {
         dto.setComments(task.getComments() != null
             ? task.getComments().stream().map(CommentDTO::from).collect(Collectors.toList())
             : List.of());
+        dto.setWorkedHours(task.getWorkedHours());
         dto.setCreatedAt(task.getCreatedAt() != null ? task.getCreatedAt().toString() : null);
         dto.setUpdatedAt(task.getUpdatedAt() != null ? task.getUpdatedAt().toString() : null);
+        dto.setCompletedAt(task.getCompletedAt() != null ? task.getCompletedAt().toString() : null);
         dto.setCreatedBy(task.getCreatedBy() != null ? task.getCreatedBy().getId().toString() : null);
         return dto;
     }
@@ -82,11 +86,17 @@ public class TaskDTO {
     public List<CommentDTO> getComments() { return comments; }
     public void setComments(List<CommentDTO> comments) { this.comments = comments; }
 
+    public Integer getWorkedHours() { return workedHours; }
+    public void setWorkedHours(Integer workedHours) { this.workedHours = workedHours; }
+
     public String getCreatedAt() { return createdAt; }
     public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
 
     public String getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(String updatedAt) { this.updatedAt = updatedAt; }
+
+    public String getCompletedAt() { return completedAt; }
+    public void setCompletedAt(String completedAt) { this.completedAt = completedAt; }
 
     public String getCreatedBy() { return createdBy; }
     public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }

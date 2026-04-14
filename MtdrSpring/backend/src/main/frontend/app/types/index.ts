@@ -22,13 +22,15 @@ export interface Task {
   priority: TaskPriority;
   type: TaskType;
   assigneeId?: string;
-  storyPoints?: number;
+  storyPoints?: number;   // expected / estimated hours
+  workedHours?: number;   // actual hours worked
   sprintId?: string;
   projectId: string;
   tags: string[];
   comments: Comment[];
   createdAt: Date;
   updatedAt: Date;
+  completedAt?: Date;
   createdBy: string;
 }
 

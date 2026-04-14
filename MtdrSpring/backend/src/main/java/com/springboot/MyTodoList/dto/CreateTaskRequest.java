@@ -12,6 +12,7 @@ public class CreateTaskRequest {
     private String sprintId;
     private String projectId;
     private List<String> tags;
+    private Integer workedHours;
 
     public CreateTaskRequest() {}
 
@@ -41,4 +42,7 @@ public class CreateTaskRequest {
 
     public List<String> getTags() { return tags; }
     public void setTags(List<String> tags) { this.tags = tags; }
+
+    public Integer getWorkedHours() { return workedHours; }
+    public void setWorkedHours(Integer workedHours) { this.workedHours = workedHours; }
 }

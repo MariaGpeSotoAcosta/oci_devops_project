@@ -46,6 +46,7 @@ const defaultForm: Partial<Task> = {
   type: 'task',
   assigneeId: '',
   storyPoints: 1,
+  workedHours: 0,
   tags: [],
   projectId: '',
   sprintId: '',
@@ -397,6 +398,25 @@ export function TaskDialog({
                 className="mt-1"
               />
             </div>
+          </div>
+
+          {/* Worked Hours */}
+          <div>
+            <Label htmlFor="td-worked" className="text-gray-700 dark:text-gray-300">
+              Worked Hours
+              <span className="ml-1 text-xs text-gray-400 font-normal">— actual time spent</span>
+            </Label>
+            <Input
+              id="td-worked"
+              type="number"
+              min="0"
+              max="9999"
+              value={formData.workedHours ?? 0}
+              onChange={(e) =>
+                setFormData({ ...formData, workedHours: parseInt(e.target.value) || 0 })
+              }
+              className="mt-1"
+            />
           </div>
 
           {/* Assignee */}

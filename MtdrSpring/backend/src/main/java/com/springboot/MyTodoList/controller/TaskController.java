@@ -111,7 +111,7 @@ public class TaskController {
         try {
             taskService.deleteTask(userId, id);
             log.info("✅ [SUCCESS] DELETE /tasks/{} - Task deleted successfully", id);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
             log.error("❌ [ERROR] DELETE /tasks/{} - Delete failed for user {}: {}", id, userId, e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();

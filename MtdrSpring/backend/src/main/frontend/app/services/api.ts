@@ -29,8 +29,10 @@ async function handleResponse<T>(res: Response): Promise<T> {
     const text = await res.text().catch(() => res.statusText);
     throw new Error(`HTTP ${res.status}: ${text}`);
   }
-  if (res.status === 204) return undefined as unknown as T;
-  return res.json() as Promise<T>;
+  // Handle responses with no body (204 No Content, or 200 with empty body from DELETE)
+  const text = await res.text();
+  if (!text) return undefined as unknown as T;
+  return JSON.parse(text) as T;
 }
 
 // ==================== AUTH API ====================
@@ -190,6 +192,7 @@ export interface UpdateTaskRequest {
   type?: Task['type'];
   assigneeId?: string;
   storyPoints?: number;
+  workedHours?: number;
   sprintId?: string;
   tags?: string[];
 }
@@ -305,6 +308,62 @@ export const projectsApi = {
 };
 
 // ==================== SPRINTS API ====================
+
+// ==================== ANALYTICS API ====================
+
+export interface VelocityPoint {
+  week: string;
+  created: number;
+  completed: number;
+}
+
+export interface PriorityPoint {
+  priority: string;
+  count: number;
+}
+
+export interface WorkedHoursPoint {
+  week: string;
+  userName: string;
+  hours: number;
+}
+
+export interface TaskDistributionPoint {
+  userId: string;
+  userName: string;
+  taskCount: number;
+  percentage: number;
+}
+
+export const analyticsApi = {
+  getVelocity: async (weeks = 8): Promise<VelocityPoint[]> => {
+    const res = await fetch(`${API_BASE_URL}/analytics/velocity?weeks=${weeks}`, {
+      headers: authHeaders(),
+    });
+    return handleResponse<VelocityPoint[]>(res);
+  },
+
+  getPriorityDistribution: async (): Promise<PriorityPoint[]> => {
+    const res = await fetch(`${API_BASE_URL}/analytics/priority`, {
+      headers: authHeaders(),
+    });
+    return handleResponse<PriorityPoint[]>(res);
+  },
+
+  getWorkedHours: async (weeks = 8): Promise<WorkedHoursPoint[]> => {
+    const res = await fetch(`${API_BASE_URL}/analytics/worked-hours?weeks=${weeks}`, {
+      headers: authHeaders(),
+    });
+    return handleResponse<WorkedHoursPoint[]>(res);
+  },
+
+  getTaskDistribution: async (): Promise<TaskDistributionPoint[]> => {
+    const res = await fetch(`${API_BASE_URL}/analytics/task-distribution`, {
+      headers: authHeaders(),
+    });
+    return handleResponse<TaskDistributionPoint[]>(res);
+  },
+};
 
 export const sprintsApi = {
   /** Get sprints for a specific project */

@@ -12,6 +12,7 @@ public class UpdateTaskRequest {
     private Integer storyPoints;
     private String sprintId;
     private List<String> tags;
+    private Integer workedHours;
 
     public UpdateTaskRequest() {}
 
@@ -41,4 +42,7 @@ public class UpdateTaskRequest {
 
     public List<String> getTags() { return tags; }
     public void setTags(List<String> tags) { this.tags = tags; }
+
+    public Integer getWorkedHours() { return workedHours; }
+    public void setWorkedHours(Integer workedHours) { this.workedHours = workedHours; }
 }

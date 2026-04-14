@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -123,6 +124,11 @@ public class TaskService {
         task.setCreatedBy(creator);
         task.setStatus("todo");
 
+        if (request.getWorkedHours() != null) {
+            task.setWorkedHours(request.getWorkedHours());
+            log.debug("⏱️ [HOURS] Task worked hours set to: {}", request.getWorkedHours());
+        }
+
         if (request.getTags() != null && !request.getTags().isEmpty()) {
             task.setTags(request.getTags());
             log.debug("🏷️ [TAG] Task tags: {}", request.getTags());
@@ -180,6 +186,14 @@ public class TaskService {
         if (request.getStatus() != null) {
             log.info("🔄 [STATUS] Task {} status → '{}'", taskId, request.getStatus());
             task.setStatus(request.getStatus());
+            // Auto-set completedAt when task transitions to "done"
+            if ("done".equals(request.getStatus()) && task.getCompletedAt() == null) {
+                task.setCompletedAt(LocalDateTime.now());
+                log.info("✅ [COMPLETE] Task {} marked done — completedAt set to now", taskId);
+            } else if (!"done".equals(request.getStatus())) {
+                task.setCompletedAt(null); // clear if moved back from done
+                log.debug("🔄 [COMPLETE] Task {} moved out of done — completedAt cleared", taskId);
+            }
         }
         if (request.getPriority() != null) {
             log.debug("🔄 [UPDATE] Task {} priority → '{}'", taskId, request.getPriority());
@@ -193,6 +207,10 @@ public class TaskService {
         }
         if (request.getTags() != null) {
             task.setTags(request.getTags());
+        }
+        if (request.getWorkedHours() != null) {
+            log.debug("⏱️ [HOURS] Task {} workedHours → {}", taskId, request.getWorkedHours());
+            task.setWorkedHours(request.getWorkedHours());
         }
         if (request.getAssigneeId() != null) {
             if (request.getAssigneeId().isBlank()) {

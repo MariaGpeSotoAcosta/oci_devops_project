@@ -54,11 +54,17 @@ public class Task {
     @JoinColumn(name = "CREATED_BY_ID")
     private AppUser createdBy;
 
+    @Column(name = "WORKED_HOURS")
+    private Integer workedHours;
+
     @Column(name = "CREATED_AT")
     private LocalDateTime createdAt;
 
     @Column(name = "UPDATED_AT")
     private LocalDateTime updatedAt;
+
+    @Column(name = "COMPLETED_AT")
+    private LocalDateTime completedAt;
 
     @PrePersist
     protected void onCreate() {
@@ -128,4 +134,10 @@ public class Task {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public Integer getWorkedHours() { return workedHours; }
+    public void setWorkedHours(Integer workedHours) { this.workedHours = workedHours; }
+
+    public LocalDateTime getCompletedAt() { return completedAt; }
+    public void setCompletedAt(LocalDateTime completedAt) { this.completedAt = completedAt; }
 }

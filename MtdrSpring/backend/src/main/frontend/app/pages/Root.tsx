@@ -91,6 +91,7 @@ export default function Root() {
         type: updates.type,
         assigneeId: updates.assigneeId,
         storyPoints: updates.storyPoints,
+        workedHours: updates.workedHours,
         sprintId: updates.sprintId,
         tags: updates.tags,
       });
