@@ -163,6 +163,27 @@ public class TeamService {
     }
 
     // ─────────────────────────────────────────────────────────────
+    // GET TEAM MEMBERS
+    // ─────────────────────────────────────────────────────────────
+
+    public List<TeamMemberDTO> getTeamMembers(Long teamId) {
+        log.info("👥 [TEAM] Fetching members for group {}", teamId);
+
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> {
+                    log.error("❌ [ERROR] Group not found with ID: {}", teamId);
+                    return new RuntimeException("Team not found: " + teamId);
+                });
+
+        List<TeamMembership> memberships = membershipRepository.findByTeam(team);
+        log.info("✅ [SUCCESS] Found {} member(s) in group {} ('{}')", memberships.size(), teamId, team.getName());
+
+        return memberships.stream()
+                .map(m -> TeamMemberDTO.from(m.getUser(), m.getRole()))
+                .collect(Collectors.toList());
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // GET TEAM TASKS
     // ─────────────────────────────────────────────────────────────
 

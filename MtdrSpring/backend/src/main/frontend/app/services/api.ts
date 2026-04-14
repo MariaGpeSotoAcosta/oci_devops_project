@@ -123,6 +123,13 @@ export const teamsApi = {
     return handleResponse<JoinTeamResponse>(res);
   },
 
+  getMembers: async (teamId: string): Promise<TeamMember[]> => {
+    const res = await fetch(`${API_BASE_URL}/teams/${teamId}/members`, {
+      headers: authHeaders(),
+    });
+    return handleResponse<TeamMember[]>(res);
+  },
+
   getById: async (teamId: string): Promise<Team> => {
     const res = await fetch(`${API_BASE_URL}/teams/${teamId}`, {
       headers: authHeaders(),
@@ -241,9 +248,23 @@ export const tasksApi = {
 
 // ==================== PROJECTS API ====================
 
+export interface UpdateProjectRequest {
+  name?: string;
+  description?: string;
+  key?: string;
+  status?: string;
+}
+
 export const projectsApi = {
   getAll: async (): Promise<Project[]> => {
     const res = await fetch(`${API_BASE_URL}/projects`, {
+      headers: authHeaders(),
+    });
+    return handleResponse<Project[]>(res);
+  },
+
+  getByTeam: async (teamId: string): Promise<Project[]> => {
+    const res = await fetch(`${API_BASE_URL}/teams/${teamId}/projects`, {
       headers: authHeaders(),
     });
     return handleResponse<Project[]>(res);
@@ -263,6 +284,23 @@ export const projectsApi = {
       body: JSON.stringify(data),
     });
     return handleResponse<Project>(res);
+  },
+
+  update: async (projectId: string, data: UpdateProjectRequest): Promise<Project> => {
+    const res = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<Project>(res);
+  },
+
+  delete: async (projectId: string): Promise<void> => {
+    const res = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    });
+    return handleResponse<void>(res);
   },
 };
 

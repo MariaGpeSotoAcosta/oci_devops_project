@@ -2,6 +2,7 @@ package com.springboot.MyTodoList.service;
 
 import com.springboot.MyTodoList.dto.CreateProjectRequest;
 import com.springboot.MyTodoList.dto.ProjectDTO;
+import com.springboot.MyTodoList.dto.UpdateProjectRequest;
 import com.springboot.MyTodoList.model.AppUser;
 import com.springboot.MyTodoList.model.Project;
 import com.springboot.MyTodoList.model.Team;
@@ -99,5 +100,76 @@ public class ProjectService {
         log.info("✅ [SUCCESS] Project '{}' (ID: {}) created by user {} in group {}",
                 saved.getName(), saved.getId(), userId, teamId);
         return ProjectDTO.from(saved);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // GET PROJECTS BY TEAM
+    // ─────────────────────────────────────────────────────────────
+
+    public List<ProjectDTO> getProjectsByTeam(Long userId, Long teamId) {
+        log.info("📁 [PROJECT] User {} fetching projects for team {}", userId, teamId);
+
+        log.debug("🔍 [LOOKUP] Fetching team by ID: {}", teamId);
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new RuntimeException("Team not found: " + teamId));
+
+        List<Project> projects = projectRepository.findByTeam(team);
+        log.info("✅ [SUCCESS] Found {} project(s) for team {}", projects.size(), teamId);
+        return projects.stream().map(ProjectDTO::from).collect(Collectors.toList());
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // UPDATE PROJECT
+    // ─────────────────────────────────────────────────────────────
+
+    @Transactional
+    public ProjectDTO updateProject(Long userId, Long projectId, UpdateProjectRequest request) {
+        log.info("📁 [PROJECT] User {} updating project {}", userId, projectId);
+
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> {
+                    log.error("❌ [ERROR] Project {} not found for update", projectId);
+                    return new RuntimeException("Project not found: " + projectId);
+                });
+
+        if (request.getName() != null && !request.getName().isBlank()) {
+            log.debug("✏️ [UPDATE] Project {} name → '{}'", projectId, request.getName());
+            project.setName(request.getName());
+        }
+        if (request.getDescription() != null) {
+            project.setDescription(request.getDescription());
+        }
+        if (request.getKey() != null && !request.getKey().isBlank()) {
+            log.debug("✏️ [UPDATE] Project {} key → '{}'", projectId, request.getKey());
+            project.setKey(request.getKey());
+        }
+        if (request.getStatus() != null && !request.getStatus().isBlank()) {
+            log.info("🔄 [STATUS] Project {} status → '{}'", projectId, request.getStatus());
+            project.setStatus(request.getStatus());
+        }
+
+        log.info("💾 [SAVE] Saving updated project {} ('{}')", projectId, project.getName());
+        Project updated = projectRepository.save(project);
+        log.info("✅ [SUCCESS] Project {} updated successfully by user {}", projectId, userId);
+        return ProjectDTO.from(updated);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // DELETE PROJECT
+    // ─────────────────────────────────────────────────────────────
+
+    @Transactional
+    public void deleteProject(Long userId, Long projectId) {
+        log.info("📁 [PROJECT] User {} deleting project {}", userId, projectId);
+
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> {
+                    log.error("❌ [ERROR] Project {} not found for deletion", projectId);
+                    return new RuntimeException("Project not found: " + projectId);
+                });
+
+        log.info("🗑️ [DELETE] Deleting project {} ('{}')", projectId, project.getName());
+        projectRepository.delete(project);
+        log.info("✅ [SUCCESS] Project {} deleted by user {}", projectId, userId);
     }
 }

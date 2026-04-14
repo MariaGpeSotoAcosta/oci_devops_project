@@ -1,6 +1,7 @@
 package com.springboot.MyTodoList.controller;
 
 import com.springboot.MyTodoList.dto.*;
+import com.springboot.MyTodoList.service.ProjectService;
 import com.springboot.MyTodoList.service.TeamService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +21,9 @@ public class TeamController {
 
     @Autowired
     private TeamService teamService;
+
+    @Autowired
+    private ProjectService projectService;
 
     /**
      * POST /api/teams/create
@@ -89,6 +93,42 @@ public class TeamController {
         } catch (RuntimeException e) {
             log.error("❌ [ERROR] GET /teams/{} - Group not found: {}", id, e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
+    /**
+     * GET /api/teams/{id}/members
+     * Get all members of a team. Used by the task assignment dropdown.
+     */
+    @GetMapping("/{id}/members")
+    public ResponseEntity<List<TeamMemberDTO>> getTeamMembers(Authentication auth, @PathVariable Long id) {
+        Long userId = (Long) auth.getPrincipal();
+        log.info("🚀 [REQUEST] GET /teams/{}/members - User: {}", id, userId);
+        try {
+            List<TeamMemberDTO> members = teamService.getTeamMembers(id);
+            log.info("✅ [SUCCESS] GET /teams/{}/members - Returning {} member(s)", id, members.size());
+            return ResponseEntity.ok(members);
+        } catch (RuntimeException e) {
+            log.error("❌ [ERROR] GET /teams/{}/members - Failed: {}", id, e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
+    /**
+     * GET /api/teams/{id}/projects
+     * Get all projects belonging to this team.
+     */
+    @GetMapping("/{id}/projects")
+    public ResponseEntity<List<ProjectDTO>> getTeamProjects(Authentication auth, @PathVariable Long id) {
+        Long userId = (Long) auth.getPrincipal();
+        log.info("🚀 [REQUEST] GET /teams/{}/projects - User: {}", id, userId);
+        try {
+            List<ProjectDTO> projects = projectService.getProjectsByTeam(userId, id);
+            log.info("✅ [SUCCESS] GET /teams/{}/projects - Returning {} project(s)", id, projects.size());
+            return ResponseEntity.ok(projects);
+        } catch (RuntimeException e) {
+            log.error("❌ [ERROR] GET /teams/{}/projects - Failed: {}", id, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 

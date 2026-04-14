@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { useTeam } from '../context/TeamContext';
 import { Task, Project, Sprint, Activity } from '../types';
-import { tasksApi, projectsApi, sprintsApi } from '../services/api';
+import { tasksApi, projectsApi, sprintsApi, UpdateProjectRequest } from '../services/api';
 import { AppLayout } from '../components/layout/AppLayout';
 import { Dashboard } from './Dashboard';
 import { Board } from './Board';
@@ -130,6 +130,46 @@ export default function Root() {
     }
   };
 
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      await tasksApi.delete(taskId);
+      setTasks((prev) => prev.filter((t) => t.id !== taskId));
+      toast.success('Task deleted successfully!');
+    } catch (err) {
+      console.error('Failed to delete task:', err);
+      toast.error('Failed to delete task');
+    }
+  };
+
+  const handleUpdateProject = async (projectId: string, data: Partial<Project>) => {
+    try {
+      const updated = await projectsApi.update(projectId, data as UpdateProjectRequest);
+      setProjects((prev) =>
+        prev.map((p) => (p.id === projectId ? (updated as unknown as Project) : p))
+      );
+      toast.success('Project updated successfully!');
+    } catch (err) {
+      console.error('Failed to update project:', err);
+      toast.error('Failed to update project');
+    }
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    try {
+      await projectsApi.delete(projectId);
+      setProjects((prev) => prev.filter((p) => p.id !== projectId));
+      setTasks((prev) => prev.filter((t) => t.projectId !== projectId));
+      if (selectedProjectId === projectId) {
+        const remaining = projects.filter((p) => p.id !== projectId);
+        setSelectedProjectId(remaining[0]?.id ?? '');
+      }
+      toast.success('Project deleted successfully!');
+    } catch (err) {
+      console.error('Failed to delete project:', err);
+      toast.error('Failed to delete project');
+    }
+  };
+
   const handleCreateProject = async (projectData: Partial<Project> & { teamId?: string }) => {
     const teamId = projectData.teamId || (teams[0]?.id ?? '');
     if (!teamId) {
@@ -172,9 +212,12 @@ export default function Root() {
   } else if (path === '/board') {
     content = (
       <Board
-        tasks={sprintTasks}
+        tasks={tasks}
+        projects={projects}
+        sprints={sprints}
         onUpdateTask={handleUpdateTask}
         onCreateTask={handleCreateTask}
+        onDeleteTask={handleDeleteTask}
         currentSprint={currentSprint}
       />
     );
@@ -182,8 +225,10 @@ export default function Root() {
     content = (
       <Backlog
         tasks={tasks}
+        projects={projects}
         onUpdateTask={handleUpdateTask}
         onCreateTask={handleCreateTask}
+        onDeleteTask={handleDeleteTask}
         sprints={projectSprints}
       />
     );
@@ -194,6 +239,8 @@ export default function Root() {
         tasks={tasks}
         sprints={sprints}
         onCreateProject={handleCreateProject}
+        onUpdateProject={handleUpdateProject}
+        onDeleteProject={handleDeleteProject}
       />
     );
   } else if (path === '/teams') {
