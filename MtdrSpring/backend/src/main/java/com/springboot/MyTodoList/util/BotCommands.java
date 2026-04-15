@@ -2,11 +2,23 @@ package com.springboot.MyTodoList.util;
 
 public enum BotCommands {
 
-	START_COMMAND("/start"), 
+	START_COMMAND("/JTDI"), 
 	HIDE_COMMAND("/hide"), 
 	TODO_LIST("/todolist"),
 	ADD_ITEM("/additem"),
-	LLM_REQ("/llm");
+	LLM_REQ("/llm"),
+
+	CONFIG_USER("/ConfigUser"),
+	TASK_FUNCS("/TaskFunctions"),
+	MY_TASKS("/MyTasks"),
+	ALL_TASKS("AllTasks"),
+	MOD_TASK("/ModifyTask"),
+	MOD_NAME("/ModName"),
+	MOD_STATUS("/ModStatus"),
+	MOD_WORKED("/ModWorked"),
+	MOD_EXPECTED("/ModExpected"),
+	NEW_TASK("/NewTask"),
+	SHOW_FUNCS("/fns");
 
 	private String command;
 
