@@ -135,3 +135,5 @@ export function TaskCard({ task, onClick, projectName }: TaskCardProps) {
     </Card>
   );
 }
+
+
