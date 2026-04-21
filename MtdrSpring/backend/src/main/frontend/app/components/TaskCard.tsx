@@ -82,8 +82,8 @@ export function TaskCard({ task, onClick, projectName }: TaskCardProps) {
         </Badge>
         {task.storyPoints != null && (
           <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-            <Clock className="w-3 h-3" /> 
-            Estimated time: {task.storyPoints}h
+            <Clock className="w-3 h-3" />
+            {task.storyPoints}h
           </span>
         )}
       </div>
@@ -116,8 +116,6 @@ export function TaskCard({ task, onClick, projectName }: TaskCardProps) {
           >
             {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
           </span>
-          <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">             <Clock className="w-3 h-3" /> 
- Worked hours: {task.workedHours ?? 0}h</div>
         </div>
 
         {assignee ? (

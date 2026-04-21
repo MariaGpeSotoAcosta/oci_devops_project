@@ -248,7 +248,68 @@ export function Dashboard({
         )}
       </div>
 
-      
+      {/* ── Stats grid ──────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Total Tasks</p>
+                <p className="text-2xl font-semibold dark:text-white">{tasks.length}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{doneTasks.length} done</p>
+              </div>
+              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/40 rounded-lg flex items-center justify-center">
+                <CheckCircle2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">In Progress</p>
+                <p className="text-2xl font-semibold dark:text-white">{inProgressTasks.length}</p>
+                <p className="text-xs text-gray-400 mt-0.5">Active now</p>
+              </div>
+              <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/40 rounded-lg flex items-center justify-center">
+                <Clock className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Hours</p>
+                <p className="text-2xl font-semibold dark:text-white">{totalWorked}h</p>
+                <p className="text-xs text-gray-400 mt-0.5">of {totalExpected}h estimated</p>
+              </div>
+              <div className="w-10 h-10 bg-green-100 dark:bg-green-900/40 rounded-lg flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Active Sprints</p>
+                <p className="text-2xl font-semibold dark:text-white">{activeSprints.length}</p>
+                <p className="text-xs text-gray-400 mt-0.5">Across {projects.length} projects</p>
+              </div>
+              <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/40 rounded-lg flex items-center justify-center">
+                <Target className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* ── Time range filter + error banner ────────────────── */}
       <div className="flex items-center justify-between">
