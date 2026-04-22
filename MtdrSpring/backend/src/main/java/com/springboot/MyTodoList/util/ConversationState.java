@@ -10,6 +10,9 @@ public enum ConversationState {
     // Creating es para crear una nueva task
     CREATING_NAME,
     CREATING_EXPECTED,
+
+    WAITING_JOIN_CODE,
+    WAITING_EMAIL,
     
     NONE
 }

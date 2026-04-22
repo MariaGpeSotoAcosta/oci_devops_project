@@ -292,6 +292,7 @@ public class TeamService {
         return dto;
     }
 
+
     private String generateJoinCode() {
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         StringBuilder sb = new StringBuilder();
@@ -301,4 +302,10 @@ public class TeamService {
         }
         return sb.toString();
     }
+    
+    
+    public boolean verifyUserByJoinCodeAndEmail(String joinCode, String email) {
+        return true;
+    }
 }
+
