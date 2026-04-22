@@ -1,10 +1,13 @@
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+import time
+
 DEFAULT_TIMEOUT = 10
 
-def wait_seconds(driver, seconds):
-    WebDriverWait(driver, seconds).until(lambda d: False)
+
+def wait_seconds(seconds):
+    time.sleep(seconds)
 
 def wait_for_element(driver, locator, timeout=DEFAULT_TIMEOUT):
     return WebDriverWait(driver, timeout).until(
