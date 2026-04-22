@@ -7,6 +7,7 @@ public class UserSession {
     private UserAction action = UserAction.NONE;
     private String tempName;
     private Integer tempExpected;
+    private String tempJoinCode;
     
     public ConversationState getState() {
         return state;
@@ -46,5 +47,13 @@ public class UserSession {
 
     public void setTempExpected(Integer tempExpected) {
         this.tempExpected = tempExpected;
+    }
+
+
+    public String getTempJoinCode() {
+        return tempJoinCode;
+    }
+    public void setTempJoinCode(String tempJoinCode) {
+        this.tempJoinCode = tempJoinCode;
     }
 }

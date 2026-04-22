@@ -4,6 +4,7 @@ import com.springboot.MyTodoList.dto.TaskDTO;
 import com.springboot.MyTodoList.model.ToDoItem;
 import com.springboot.MyTodoList.service.DeepSeekService;
 import com.springboot.MyTodoList.service.TaskService;
+import com.springboot.MyTodoList.service.TeamService;
 import com.springboot.MyTodoList.service.ToDoItemService;
 import java.util.HashMap;
 import java.util.Map;
@@ -25,6 +26,7 @@ public class BotActions {
     DeepSeekService deepSeekService;
     TaskService taskService;
     String telegramUsername;
+    TeamService teamService;
 
     private static final Map<Long, UserSession> sessions = new HashMap<>();
 
@@ -141,7 +143,8 @@ public class BotActions {
         }
 
         if (session.getState() != ConversationState.NONE &&
-            session.getAction() != UserAction.CREATE_TASK) {
+            session.getAction() != UserAction.CREATE_TASK &&
+            session.getAction() != UserAction.CONFIG_USER) {
 
             switch (session.getAction()) {
 
@@ -209,6 +212,37 @@ public class BotActions {
                 BotHelper.sendMessageToTelegram(chatId, "🚨 Task could not be created!\n" + e.getMessage(), telegramClient, null);
             }
 
+            return true;
+        }
+
+        if (session.getState() == ConversationState.WAITING_JOIN_CODE) {
+            session.setTempJoinCode(requestText);
+            session.setState(ConversationState.WAITING_EMAIL);
+
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.CONFIG_USER_2.getMessage(), telegramClient, null);
+            return true;
+        }
+
+        if (session.getState() == ConversationState.WAITING_EMAIL) {
+            String joinCode = session.getTempJoinCode();
+            String email = requestText;
+
+            try {
+                Boolean success = teamService.verifyUserByJoinCodeAndEmail(joinCode, email);
+
+                if (success) {
+                    BotHelper.sendMessageToTelegram(chatId, BotMessages.CONFIG_SUCC.getMessage(), telegramClient, null);
+                } else {
+                    BotHelper.sendMessageToTelegram(chatId, BotMessages.CONFIG_FAIL.getMessage(), telegramClient, null);
+                }
+            } catch (Exception e) {
+                logger.error("Error verifying user", e);
+                BotHelper.sendMessageToTelegram(chatId, BotMessages.CONFIG_FAIL.getMessage(), telegramClient, null);
+            }
+
+            session.setTempJoinCode(null);
+            session.setState(ConversationState.NONE);
+            session.setAction(UserAction.NONE);
             return true;
         }
 
@@ -326,5 +360,16 @@ public class BotActions {
 
         BotHelper.sendMessageToTelegram(chatId, BotMessages.CANCELLED.getMessage(), telegramClient, null);
         return true;
+    }
+
+    public void fnConfigUser() {
+        if (!requestText.equals(BotCommands.CONFIG_USER.getCommand()))
+            return;
+
+        UserSession session = getSession();
+        session.setAction(UserAction.CONFIG_USER);
+        session.setState(ConversationState.WAITING_JOIN_CODE);
+
+        BotHelper.sendMessageToTelegram(chatId, BotMessages.CONFIG_USER_1.getMessage(), telegramClient, null);
     }
 }
