@@ -5,6 +5,10 @@ import com.springboot.MyTodoList.service.DeepSeekService;
 import com.springboot.MyTodoList.service.TaskService;
 import com.springboot.MyTodoList.service.ToDoItemService;
 import com.springboot.MyTodoList.util.BotActions;
+
+import java.util.HashMap;
+import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,8 +30,9 @@ public class ToDoItemBotController implements SpringLongPollingBot, LongPollingS
     private DeepSeekService deepSeekService;
     private TaskService taskService;
     private final TelegramClient telegramClient;
-
     private final BotProps botProps;
+
+    private final Map<Long, BotActions> userSessions = new HashMap<>();
 
     @Value("${telegram.bot.token}")
     private String telegramBotToken;
@@ -56,7 +61,6 @@ public class ToDoItemBotController implements SpringLongPollingBot, LongPollingS
 
     @Override
     public void consume(Update update) {
-
         if (!update.hasMessage() || !update.getMessage().hasText()) return;
 
         String messageTextFromTelegram = update.getMessage().getText();
@@ -67,24 +71,21 @@ public class ToDoItemBotController implements SpringLongPollingBot, LongPollingS
             telegramUsername = update.getMessage().getFrom().getUserName();
         }
 
-        BotActions actions = new BotActions(telegramClient, toDoItemService, deepSeekService, taskService);
+
+        BotActions actions = userSessions.computeIfAbsent(
+            chatId,
+            id -> new BotActions(telegramClient, toDoItemService, deepSeekService, taskService)
+        );
+
+        // Update per-message fields
         actions.setRequestText(messageTextFromTelegram);
         actions.setChatId(chatId);
         actions.setTelegramUsername(telegramUsername);
 
-        if (actions.getTodoService() == null) {
-            logger.info("todosvc error");
-            actions.setTodoService(toDoItemService);
-        }
 
-        if (actions.getTaskService() == null) {
-            logger.info("tasksvc error");
-            actions.setTaskService(taskService);
-        }
+        if (actions.fnCancel()) return;
 
-        if (actions.handleState()) {
-            return;
-        }
+        if (actions.handleState()) return;
 
         actions.fnStart();
         actions.fnModfiyTask();
@@ -94,7 +95,6 @@ public class ToDoItemBotController implements SpringLongPollingBot, LongPollingS
         actions.fnModExpected();
         actions.fnNewTask();
         actions.fnListMyTasks();
-        actions.fnElse();
     }
 
     @AfterBotRegistration
