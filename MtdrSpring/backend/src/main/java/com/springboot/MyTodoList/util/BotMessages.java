@@ -22,6 +22,9 @@ public enum BotMessages {
     KEY("🔑"),
     USER("👤"),
 
+    // /Cancel
+    CANCELLED("❌ Operation cancelled."),
+
     // /ConfigUser
     CONFIG_USER_1("✏️ Please write your JoinCode!\n" +
             	  "🔑 If you don't have a JoinCode you can generate one in the web page.\n" +

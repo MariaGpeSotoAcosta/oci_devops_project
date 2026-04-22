@@ -13,6 +13,7 @@ public enum BotCommands {
 	MOD_WORKED("/ModWorked"),
 	MOD_EXPECTED("/ModExpected"),
 	NEW_TASK("/NewTask"),
+	CANCEL("/Cancel"),
 	SHOW_FUNCS("/fns");
 
 	private String command;

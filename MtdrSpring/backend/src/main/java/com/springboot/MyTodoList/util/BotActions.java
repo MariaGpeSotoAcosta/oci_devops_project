@@ -312,4 +312,19 @@ public class BotActions {
 
         BotHelper.sendMessageToTelegram(chatId, BotMessages.NEW_TASK_1.getMessage(), telegramClient, null);
     }
+
+    public boolean fnCancel() {
+        if (!requestText.equals(BotCommands.CANCEL.getCommand()))
+            return false;
+
+        UserSession session = getSession();
+        session.setState(ConversationState.NONE);
+        session.setAction(UserAction.NONE);
+        session.setTaskId(null);
+        session.setTempName(null);
+        session.setTempExpected(null);
+
+        BotHelper.sendMessageToTelegram(chatId, BotMessages.CANCELLED.getMessage(), telegramClient, null);
+        return true;
+    }
 }
