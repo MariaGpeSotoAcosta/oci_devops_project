@@ -7,14 +7,17 @@ from webdriver_manager.chrome import ChromeDriverManager
 @pytest.fixture
 def driver():
     options = webdriver.ChromeOptions()
-
-    options.binary_location = "/usr/bin/brave"
-    options.add_argument("--user-data-dir=/tmp/brave-telegram-profile")
+    
+    # Remove Brave-specific binary location
+    # Chrome will be auto-detected from standard install locations
+    
+    # Use Chrome-specific profile directory
+    options.add_argument("--user-data-dir=/tmp/chrome-telegram-profile")
     options.add_argument("--start-maximized")
 
-    # 👇 IMPORTANT: match driver version to Brave
+    # Let webdriver-manager auto-detect and install the correct ChromeDriver version
     driver = webdriver.Chrome(
-        service=Service(ChromeDriverManager(driver_version="145").install()),
+        service=Service(ChromeDriverManager().install()),
         options=options
     )
 

@@ -2,35 +2,93 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
+*.pyo
+*.pyd
+
+# C extensions
+*.so
 
 # Virtual environment
 venv/
 .venv/
 env/
 ENV/
+env.bak/
+venv.bak/
 
 # Pytest
 .pytest_cache/
 .cache/
+*.pytest_cache
 
 # Coverage reports
 .coverage
 .coverage.*
 htmlcov/
+.tox/
+.nox/
 
 # Distribution / packaging
 build/
 dist/
 *.egg-info/
 .eggs/
+*.egg
+.Python
+develop-eggs/
+downloads/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage
+.hypothesis/
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
 
 # Logs
 *.log
+pip-log.txt
 
 # IDEs / editors
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
 
 # OS files
 .DS_Store
 Thumbs.db
+*.bak
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Selenium
+*.log
+geckodriver.log
+chromedriver.log
+
+# Environment variables
+.env
+.env.local
