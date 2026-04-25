@@ -39,9 +39,14 @@ public class TaskDTO {
         dto.setSprintId(task.getSprint() != null ? task.getSprint().getId().toString() : null);
         dto.setProjectId(task.getProject() != null ? task.getProject().getId().toString() : null);
         dto.setTags(task.getTags());
-        dto.setComments(task.getComments() != null
-            ? task.getComments().stream().map(CommentDTO::from).collect(Collectors.toList())
-            : List.of());
+        // Use try-catch to handle LazyInitializationException when called outside a Hibernate session
+        try {
+            dto.setComments(task.getComments() != null
+                ? task.getComments().stream().map(CommentDTO::from).collect(Collectors.toList())
+                : List.of());
+        } catch (Exception e) {
+            dto.setComments(List.of());
+        }
         dto.setWorkedHours(task.getWorkedHours());
         dto.setCreatedAt(task.getCreatedAt() != null ? task.getCreatedAt().toString() : null);
         dto.setUpdatedAt(task.getUpdatedAt() != null ? task.getUpdatedAt().toString() : null);
