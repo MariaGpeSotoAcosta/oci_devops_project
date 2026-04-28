@@ -99,3 +99,9 @@ export interface NotificationSettings {
   emailNotifications: boolean;
   telegramNotifications: boolean;
 }
+
+export interface AIInsight {
+  week: string;
+  content: string;
+  generatedAt: string;
+}

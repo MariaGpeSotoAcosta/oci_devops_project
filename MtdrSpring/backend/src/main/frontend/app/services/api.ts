@@ -391,3 +391,74 @@ export const sprintsApi = {
     return handleResponse<Sprint>(res);
   },
 };
+
+// ==================== AI API ====================
+// Add this to your existing services/api.ts file or create a new aiInsightsApi.ts
+
+export interface AIInsight {
+  week: string;
+  content: string;
+  generatedAt: string;
+}
+
+export const aiInsightsApi = {
+  /**
+   * Fetch all AI insights from the backend
+   */
+  async getInsights(): Promise<AIInsight[]> {
+    const response = await fetch('/api/ai/insights', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        // Add authorization header if needed
+        // 'Authorization': `Bearer ${getAuthToken()}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch insights: ${response.statusText}`);
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Generate new AI insights based on current KPI data
+   */
+  async generateInsights(): Promise<AIInsight> {
+    const response = await fetch('/api/ai/insights/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to generate insights: ${response.statusText}`);
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Get insights for a specific week
+   */
+  async getInsightsByWeek(week: string): Promise<AIInsight | null> {
+    const response = await fetch(`/api/ai/insights/week/${week}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.status === 404) {
+      return null;
+    }
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch insight for week ${week}: ${response.statusText}`);
+    }
+
+    return response.json();
+  },
+};
