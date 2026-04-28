@@ -8,24 +8,54 @@ import { Label } from '../components/ui/label';
 import { Switch } from '../components/ui/switch';
 import { Separator } from '../components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Badge } from '../components/ui/badge';
-import { User, Bell, MessageSquare, Shield, CheckCircle2 } from 'lucide-react';
+import { User, Bell, MessageSquare, CheckCircle2, Copy, RefreshCw, Clock } from 'lucide-react';
 import { defaultNotificationSettings } from '../data/mockData';
 import { toast } from 'sonner';
 
+// ── API helper ────────────────────────────────────────────────────────────────
+
+function getToken(): string {
+  return localStorage.getItem('auth_token') ?? '';
+}
+
+async function generateJoinCode(): Promise<{ code: string; expiresInMinutes: number }> {
+  const res = await fetch('/api/telegram/join-code', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${getToken()}`,
+    },
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export function Settings() {
   const { user } = useAuth();
+
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
     email: user?.email || '',
   });
-  
+
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(
     defaultNotificationSettings
   );
 
-  const [telegramConnected, setTelegramConnected] = useState(user?.telegramConnected || false);
-  const [telegramUsername, setTelegramUsername] = useState(user?.telegramUsername || '');
+  // ── Telegram state ──────────────────────────────────────────────────────────
+  const [telegramConnected]   = useState(user?.telegramConnected || false);
+  const [telegramUsername]    = useState(user?.telegramUsername || '');
+
+  /** The join code currently shown to the user */
+  const [joinCode, setJoinCode]           = useState<string | null>(null);
+  /** When the current code expires (Date object) */
+  const [codeExpiry, setCodeExpiry]       = useState<Date | null>(null);
+  /** True while the POST /api/telegram/join-code request is in flight */
+  const [generatingCode, setGeneratingCode] = useState(false);
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
 
   const handleProfileSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,19 +66,35 @@ export function Settings() {
     toast.success('Notification preferences saved!');
   };
 
-  const handleConnectTelegram = () => {
-    // Mock Telegram connection
-    setTelegramConnected(true);
-    setTelegramUsername('@taskflow_bot');
-    toast.success('Telegram account connected!');
+  /** Calls the backend to create a new join code and shows it to the user. */
+  const handleGenerateCode = async () => {
+    setGeneratingCode(true);
+    try {
+      const { code, expiresInMinutes } = await generateJoinCode();
+      setJoinCode(code);
+      const expiry = new Date(Date.now() + expiresInMinutes * 60 * 1000);
+      setCodeExpiry(expiry);
+      toast.success('Join code generated! It expires in 15 minutes.');
+    } catch (err) {
+      toast.error('Could not generate join code. Please try again.');
+    } finally {
+      setGeneratingCode(false);
+    }
   };
 
-  const handleDisconnectTelegram = () => {
-    setTelegramConnected(false);
-    setTelegramUsername('');
-    setNotificationSettings({ ...notificationSettings, telegramNotifications: false });
-    toast.success('Telegram account disconnected!');
+  /** Copies the join code to clipboard. */
+  const handleCopyCode = () => {
+    if (!joinCode) return;
+    navigator.clipboard.writeText(joinCode).then(() => {
+      toast.success('Join code copied to clipboard!');
+    });
   };
+
+  /** Formats the expiry time as HH:MM */
+  const formatExpiry = (date: Date) =>
+    date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
     <div className="p-6 max-w-4xl">
@@ -75,7 +121,7 @@ export function Settings() {
           </TabsTrigger>
         </TabsList>
 
-        {/* Profile Settings */}
+        {/* ── Profile ── */}
         <TabsContent value="profile">
           <Card>
             <CardHeader>
@@ -112,7 +158,6 @@ export function Settings() {
                       required
                     />
                   </div>
-
                   <div>
                     <Label htmlFor="email">Email</Label>
                     <Input
@@ -123,7 +168,6 @@ export function Settings() {
                       required
                     />
                   </div>
-
                   <div>
                     <Label htmlFor="role">Role</Label>
                     <Input
@@ -145,9 +189,7 @@ export function Settings() {
           <Card className="mt-6">
             <CardHeader>
               <CardTitle className="text-red-600">Danger Zone</CardTitle>
-              <CardDescription>
-                Irreversible and destructive actions
-              </CardDescription>
+              <CardDescription>Irreversible and destructive actions</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between p-4 border border-red-200 dark:border-red-900 rounded-lg">
@@ -163,14 +205,12 @@ export function Settings() {
           </Card>
         </TabsContent>
 
-        {/* Notification Settings */}
+        {/* ── Notifications ── */}
         <TabsContent value="notifications">
           <Card>
             <CardHeader>
               <CardTitle>Notification Preferences</CardTitle>
-              <CardDescription>
-                Manage how you receive notifications
-              </CardDescription>
+              <CardDescription>Manage how you receive notifications</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div>
@@ -199,69 +239,26 @@ export function Settings() {
               <div>
                 <h4 className="mb-4 dark:text-white">Activity Notifications</h4>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="taskAssignment">Task Assignments</Label>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        When you're assigned to a task
-                      </p>
+                  {[
+                    { id: 'taskAssignment', label: 'Task Assignments', desc: "When you're assigned to a task", key: 'taskAssignment' as const },
+                    { id: 'sprintUpdates',  label: 'Sprint Updates',   desc: 'When sprints start, end, or are updated', key: 'sprintUpdates' as const },
+                    { id: 'mentions',       label: 'Mentions',         desc: 'When someone mentions you in a comment', key: 'mentions' as const },
+                    { id: 'comments',       label: 'Comments',         desc: 'When someone comments on your tasks', key: 'comments' as const },
+                  ].map(({ id, label, desc, key }) => (
+                    <div key={id} className="flex items-center justify-between">
+                      <div>
+                        <Label htmlFor={id}>{label}</Label>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{desc}</p>
+                      </div>
+                      <Switch
+                        id={id}
+                        checked={notificationSettings[key]}
+                        onCheckedChange={(checked) =>
+                          setNotificationSettings({ ...notificationSettings, [key]: checked })
+                        }
+                      />
                     </div>
-                    <Switch
-                      id="taskAssignment"
-                      checked={notificationSettings.taskAssignment}
-                      onCheckedChange={(checked) =>
-                        setNotificationSettings({ ...notificationSettings, taskAssignment: checked })
-                      }
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="sprintUpdates">Sprint Updates</Label>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        When sprints start, end, or are updated
-                      </p>
-                    </div>
-                    <Switch
-                      id="sprintUpdates"
-                      checked={notificationSettings.sprintUpdates}
-                      onCheckedChange={(checked) =>
-                        setNotificationSettings({ ...notificationSettings, sprintUpdates: checked })
-                      }
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="mentions">Mentions</Label>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        When someone mentions you in a comment
-                      </p>
-                    </div>
-                    <Switch
-                      id="mentions"
-                      checked={notificationSettings.mentions}
-                      onCheckedChange={(checked) =>
-                        setNotificationSettings({ ...notificationSettings, mentions: checked })
-                      }
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="comments">Comments</Label>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        When someone comments on your tasks
-                      </p>
-                    </div>
-                    <Switch
-                      id="comments"
-                      checked={notificationSettings.comments}
-                      onCheckedChange={(checked) =>
-                        setNotificationSettings({ ...notificationSettings, comments: checked })
-                      }
-                    />
-                  </div>
+                  ))}
                 </div>
               </div>
 
@@ -272,96 +269,158 @@ export function Settings() {
           </Card>
         </TabsContent>
 
-        {/* Telegram Integration */}
+        {/* ── Telegram ── */}
         <TabsContent value="telegram">
           <Card>
             <CardHeader>
               <CardTitle>Telegram Integration</CardTitle>
               <CardDescription>
-                Connect your Telegram account to receive notifications
+                Link your Telegram account to manage tasks directly from the bot
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {!telegramConnected ? (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <MessageSquare className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+
+              {/* ── Already connected ── */}
+              {telegramConnected ? (
+                <div className="flex items-center gap-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900 rounded-lg">
+                  <div className="w-12 h-12 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center">
+                    <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
                   </div>
-                  <h3 className="text-xl mb-2 dark:text-white">Connect Telegram</h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                    Get instant notifications on Telegram when tasks are assigned, 
-                    sprints are updated, or you're mentioned in comments
-                  </p>
-                  <Button onClick={handleConnectTelegram}>
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    Connect Telegram Account
-                  </Button>
-                  
-                  <div className="mt-8 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg text-left">
-                    <h4 className="font-medium mb-2 dark:text-white">How to connect:</h4>
-                    <ol className="text-sm text-gray-600 dark:text-gray-400 space-y-1 list-decimal list-inside">
-                      <li>Click the "Connect Telegram Account" button</li>
-                      <li>Open Telegram and search for @TaskFlowBot</li>
-                      <li>Send the command /start to the bot</li>
-                      <li>Follow the bot's instructions to complete linking</li>
-                    </ol>
+                  <div className="flex-1">
+                    <p className="font-medium text-green-900 dark:text-green-100">
+                      Telegram Connected
+                    </p>
+                    <p className="text-sm text-green-700 dark:text-green-300">
+                      {telegramUsername ? `Connected as ${telegramUsername}` : 'Account linked'}
+                    </p>
                   </div>
                 </div>
               ) : (
-                <div>
-                  <div className="flex items-center gap-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900 rounded-lg mb-6">
-                    <div className="w-12 h-12 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center">
-                      <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-green-900 dark:text-green-100">
-                        Telegram Connected
-                      </p>
-                      <p className="text-sm text-green-700 dark:text-green-300">
-                        Connected to {telegramUsername}
-                      </p>
-                    </div>
-                    <Button variant="outline" onClick={handleDisconnectTelegram}>
-                      Disconnect
-                    </Button>
-                  </div>
-
-                  <Separator />
-
-                  <div className="mt-6">
-                    <h4 className="mb-4 dark:text-white">Telegram Notifications</h4>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label htmlFor="telegramNotifications">Enable Telegram Notifications</Label>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Receive notifications via Telegram
-                          </p>
-                        </div>
-                        <Switch
-                          id="telegramNotifications"
-                          checked={notificationSettings.telegramNotifications}
-                          onCheckedChange={(checked) =>
-                            setNotificationSettings({ ...notificationSettings, telegramNotifications: checked })
-                          }
-                        />
-                      </div>
-                    </div>
-
-                    <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                      <h5 className="font-medium mb-2 text-blue-900 dark:text-blue-100">
-                        What you'll receive on Telegram:
-                      </h5>
-                      <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
-                        <li>• Task assignments</li>
-                        <li>• Sprint start and completion notifications</li>
-                        <li>• Mentions in comments</li>
-                        <li>• Important project updates</li>
-                      </ul>
-                    </div>
-                  </div>
+                <div className="flex items-center gap-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                  <MessageSquare className="w-5 h-5 text-yellow-600 dark:text-yellow-400 shrink-0" />
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                    Your Telegram account is not linked yet. Follow the steps below.
+                  </p>
                 </div>
               )}
+
+              <Separator />
+
+              {/* ── How-to steps ── */}
+              <div>
+                <h4 className="font-medium mb-4 dark:text-white">
+                  How to link your account
+                </h4>
+                <ol className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+                  <li className="flex gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-xs font-bold">1</span>
+                    <span>
+                      Click <strong>"Generate Join Code"</strong> below to get a one-time code valid for 15 minutes.
+                    </span>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-xs font-bold">2</span>
+                    <span>
+                      Open Telegram and find the bot{' '}
+                      <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">@YourBotName</code>.
+                    </span>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-xs font-bold">3</span>
+                    <span>
+                      Send the command <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">/ConfigUser</code> to the bot.
+                    </span>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-xs font-bold">4</span>
+                    <span>
+                      Paste the join code when the bot asks for it.
+                    </span>
+                  </li>
+                </ol>
+              </div>
+
+              <Separator />
+
+              {/* ── Join code generator ── */}
+              <div>
+                <h4 className="font-medium mb-3 dark:text-white">Join Code</h4>
+
+                {joinCode ? (
+                  <div className="space-y-3">
+                    {/* Code display */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 font-mono text-2xl tracking-widest text-center py-4 px-6 bg-gray-100 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 select-all dark:text-white">
+                        {joinCode}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={handleCopyCode}
+                        title="Copy to clipboard"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
+
+                    {/* Expiry notice */}
+                    {codeExpiry && (
+                      <p className="flex items-center gap-1.5 text-sm text-amber-600 dark:text-amber-400">
+                        <Clock className="w-4 h-4" />
+                        Expires at {formatExpiry(codeExpiry)} — code is single-use
+                      </p>
+                    )}
+
+                    {/* Regenerate */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGenerateCode}
+                      disabled={generatingCode}
+                    >
+                      <RefreshCw className={`w-4 h-4 mr-2 ${generatingCode ? 'animate-spin' : ''}`} />
+                      Generate New Code
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Generate a one-time code to paste in the Telegram bot. The code expires after 15 minutes.
+                    </p>
+                    <Button onClick={handleGenerateCode} disabled={generatingCode}>
+                      {generatingCode ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                          Generating…
+                        </>
+                      ) : (
+                        <>
+                          <MessageSquare className="w-4 h-4 mr-2" />
+                          Generate Join Code
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* ── What you can do ── */}
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <h5 className="font-medium mb-2 text-blue-900 dark:text-blue-100">
+                  What you can do from Telegram:
+                </h5>
+                <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                  <li>📋 <code>/NewTask</code> — create a task and pick a project</li>
+                  <li>📝 <code>/MyTasks</code> — see your assigned tasks</li>
+                  <li>✏️ <code>/ModName</code> — rename a task</li>
+                  <li>🔋 <code>/ModStatus</code> — change task status</li>
+                  <li>⏱️ <code>/ModWorked</code> — log worked hours</li>
+                  <li>⏱️ <code>/ModExpected</code> — update expected hours</li>
+                </ul>
+              </div>
+
             </CardContent>
           </Card>
         </TabsContent>
