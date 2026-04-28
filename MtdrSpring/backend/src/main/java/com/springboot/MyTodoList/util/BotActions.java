@@ -1,21 +1,18 @@
 package com.springboot.MyTodoList.util;
 
+import com.springboot.MyTodoList.dto.TaskDTO;
 import com.springboot.MyTodoList.model.ToDoItem;
 import com.springboot.MyTodoList.service.DeepSeekService;
+import com.springboot.MyTodoList.service.TaskService;
 import com.springboot.MyTodoList.service.ToDoItemService;
-import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
-public class BotActions{
+public class BotActions {
 
     private static final Logger logger = LoggerFactory.getLogger(BotActions.class);
 
@@ -26,67 +23,77 @@ public class BotActions{
 
     ToDoItemService todoService;
     DeepSeekService deepSeekService;
+    TaskService taskService;
+    String telegramUsername;
 
     private static final Map<Long, UserSession> sessions = new HashMap<>();
 
-    public BotActions(TelegramClient tc,ToDoItemService ts, DeepSeekService ds){
+    public BotActions(TelegramClient tc, ToDoItemService ts, DeepSeekService ds, TaskService taskService) {
         telegramClient = tc;
         todoService = ts;
         deepSeekService = ds;
-        exit  = false;
+        this.taskService = taskService;
+        exit = false;
     }
 
-    public void setRequestText(String cmd){
-        requestText=cmd;
+    public void setRequestText(String cmd) {
+        requestText = cmd;
     }
 
-    public void setChatId(long chId){
-        chatId=chId;
+    public void setChatId(long chId) {
+        chatId = chId;
     }
 
-    public void setTelegramClient(TelegramClient tc){
-        telegramClient=tc;
+    public void setTelegramClient(TelegramClient tc) {
+        telegramClient = tc;
     }
 
-    public void setTodoService(ToDoItemService tsvc){
+    public void setTodoService(ToDoItemService tsvc) {
         todoService = tsvc;
     }
 
-    public ToDoItemService getTodoService(){
+    public ToDoItemService getTodoService() {
         return todoService;
     }
 
-    public void setDeepSeekService(DeepSeekService dssvc){
+    public void setDeepSeekService(DeepSeekService dssvc) {
         deepSeekService = dssvc;
     }
 
-    public DeepSeekService getDeepSeekService(){
+    public DeepSeekService getDeepSeekService() {
         return deepSeekService;
+    }
+
+    public void setTaskService(TaskService taskService) {
+        this.taskService = taskService;
+    }
+
+    public TaskService getTaskService() {
+        return taskService;
+    }
+
+    public void setTelegramUsername(String telegramUsername) {
+        this.telegramUsername = telegramUsername;
     }
 
     private UserSession getSession() {
         return sessions.computeIfAbsent(chatId, k -> new UserSession());
     }
 
-    public void fnListMyTasks(){
+    public void fnListMyTasks() {
         if (!(requestText.equals(BotCommands.MY_TASKS.getCommand())) || exit)
             return;
 
-        List<ToDoItem> allItems = todoService.findAll(); // Este service tambn se tiene que cambiar
+        List<ToDoItem> allItems = todoService.findAll();
         StringBuilder msg = new StringBuilder(BotMessages.MY_TASK_SUCC.getMessage());
 
         for (ToDoItem item : allItems) {
-            //msg.append(item.getId() + "\n");
-            //msg.append(item.getName() + "\n");
-            //msg.append(item.getStatus() + "\n");
+            // pendiente adaptar esta parte al modelo real de Task
         }
 
-        BotHelper.sendMessageToTelegram(chatId, msg.toString(), telegramClient,  null);//
+        BotHelper.sendMessageToTelegram(chatId, msg.toString(), telegramClient, null);
         exit = true;
     }
-
-  
-
 
     public void fnElse() {
         UserSession session = getSession();
@@ -97,13 +104,9 @@ public class BotActions{
         BotHelper.sendMessageToTelegram(chatId, BotMessages.HELLO_MYTODO_BOT.getMessage(), telegramClient, null);
     }
 
-
     public boolean handleState() {
         UserSession session = getSession();
 
-        // =========================
-        // MODIFY FLOW - STEP 1 (GET ID)
-        // =========================
         if (session.getState() == ConversationState.WAITING_ID) {
 
             session.setTaskId(requestText);
@@ -137,31 +140,21 @@ public class BotActions{
             return true;
         }
 
-        // =========================
-        // MODIFY FLOW - STEP 2 (FINAL VALUE)
-        // =========================
         if (session.getState() != ConversationState.NONE &&
             session.getAction() != UserAction.CREATE_TASK) {
-
-            String taskId = session.getTaskId();
-            String value = requestText;
 
             switch (session.getAction()) {
 
                 case MOD_NAME:
-                    // todoService.updateName(taskId, value);
                     break;
 
                 case MOD_STATUS:
-                    // todoService.updateStatus(taskId, value);
                     break;
 
                 case MOD_WORKED:
-                    // todoService.updateWorked(taskId, value);
                     break;
 
                 case MOD_EXPECTED:
-                    // todoService.updateExpected(taskId, value);
                     break;
 
                 default:
@@ -176,9 +169,6 @@ public class BotActions{
             return true;
         }
 
-        // =========================
-        // CREATE TASK - STEP 1 (NAME)
-        // =========================
         if (session.getState() == ConversationState.CREATING_NAME) {
 
             session.setTempName(requestText);
@@ -189,28 +179,34 @@ public class BotActions{
             return true;
         }
 
-        // =========================
-        // CREATE TASK - STEP 2 (EXPECTED HOURS)
-        // =========================
         if (session.getState() == ConversationState.CREATING_EXPECTED) {
             try {
                 int expected = Integer.parseInt(requestText);
                 session.setTempExpected(expected);
 
-                // 🔥 CREATE TASK HERE
-                // Example:
-                // todoService.createTask(session.getTempName(), expected);
+                TaskDTO createdTask = taskService.createTaskFromTelegram(
+                        telegramUsername,
+                        session.getTempName(),
+                        expected
+                );
 
-                // cleanup
                 session.setTempName(null);
                 session.setTempExpected(null);
                 session.setState(ConversationState.NONE);
                 session.setAction(UserAction.NONE);
 
-                BotHelper.sendMessageToTelegram(chatId, BotMessages.NEW_TASK_SUCC.getMessage(), telegramClient, null);
+                String message = BotMessages.NEW_TASK_SUCC.getMessage()
+                        + "\n🆔 ID: " + createdTask.getId()
+                        + "\n📝 Title: " + createdTask.getTitle()
+                        + "\n📁 Project ID: " + createdTask.getProjectId();
+
+                BotHelper.sendMessageToTelegram(chatId, message, telegramClient, null);
 
             } catch (NumberFormatException e) {
-                BotHelper.sendMessageToTelegram(chatId, "🚨 Task could not be created!", telegramClient, null);
+                BotHelper.sendMessageToTelegram(chatId, "🚨 Expected hours must be a valid number!", telegramClient, null);
+            } catch (Exception e) {
+                logger.error("Error creating task from Telegram", e);
+                BotHelper.sendMessageToTelegram(chatId, "🚨 Task could not be created!\n" + e.getMessage(), telegramClient, null);
             }
 
             return true;
@@ -219,8 +215,7 @@ public class BotActions{
         return false;
     }
 
-
-    public void fnStart(){
+    public void fnStart() {
         if (!(requestText.equals(BotCommands.START_COMMAND.getCommand())) || exit)
             return;
 
@@ -229,8 +224,7 @@ public class BotActions{
         exit = true;
     }
 
-
-    public void fnModfiyTask(){
+    public void fnModfiyTask() {
         if (!(requestText.equals(BotCommands.MOD_TASK.getCommand())) || exit)
             return;
 
@@ -238,7 +232,6 @@ public class BotActions{
 
         exit = true;
     }
-
 
     public void fnModifyCommands() {
         UserSession session = getSession();
@@ -264,7 +257,6 @@ public class BotActions{
         BotHelper.sendMessageToTelegram(chatId, BotMessages.MOD_ASK_ID.getMessage(), telegramClient, null);
     }
 
-
     public void fnModName() {
         if (!requestText.equals(BotCommands.MOD_NAME.getCommand()))
             return;
@@ -275,8 +267,7 @@ public class BotActions{
 
         BotHelper.sendMessageToTelegram(chatId, BotMessages.MOD_ASK_ID.getMessage(), telegramClient, null);
     }
-    
-    
+
     public void fnModStatus() {
         if (!requestText.equals(BotCommands.MOD_STATUS.getCommand()))
             return;
@@ -287,8 +278,7 @@ public class BotActions{
 
         BotHelper.sendMessageToTelegram(chatId, BotMessages.MOD_ASK_ID.getMessage(), telegramClient, null);
     }
-    
-    
+
     public void fnModWorked() {
         if (!requestText.equals(BotCommands.MOD_WORKED.getCommand()))
             return;
@@ -299,8 +289,7 @@ public class BotActions{
 
         BotHelper.sendMessageToTelegram(chatId, BotMessages.MOD_ASK_ID.getMessage(), telegramClient, null);
     }
-    
-    
+
     public void fnModExpected() {
         if (!requestText.equals(BotCommands.MOD_EXPECTED.getCommand()))
             return;
@@ -311,7 +300,6 @@ public class BotActions{
 
         BotHelper.sendMessageToTelegram(chatId, BotMessages.MOD_ASK_ID.getMessage(), telegramClient, null);
     }
-
 
     public void fnNewTask() {
         if (!requestText.equals(BotCommands.NEW_TASK.getCommand()))
