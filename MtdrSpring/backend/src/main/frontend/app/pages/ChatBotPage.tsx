@@ -33,95 +33,43 @@ export function ChatBotPage() {
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const dummyInsights: AIInsight[] = [
-    {
-      week: "2026-W17",
-      generatedAt: new Date().toISOString(),
-      content: `# Weekly Team Performance Insights
-
-  ## 🚀 Task Completion Velocity
-  **Status:** ⚠️ Needs Attention  
-  Your team is completing **62%** of tasks.
-
-  - Break down large tasks
-  - Review sprint capacity
-  - Remove blockers
-
-  ## ⚖️ Task Priority Distribution
-  **Status:** ⚠️ High Priority Overload  
-  **55%** of tasks are high priority.
-
-  - Re-evaluate urgency
-  - Avoid over-prioritization
-
-  ## 👥 Team Workload Balance
-  **Status:** ⚠️ Uneven Distribution  
-
-  **Most loaded:** Alice  
-  **Least loaded:** Bob
-  `
-    },
-    {
-      week: "2026-W16",
-      generatedAt: new Date(Date.now() - 7 * 86400000).toISOString(),
-      content: `# Weekly Team Performance Insights
-
-  ## 🚀 Task Completion Velocity
-  **Status:** ✅ Good Performance  
-  Completion rate is **82%**
-
-  ## ⚖️ Task Priority Distribution
-  **Status:** ✅ Balanced  
-
-  ## 👥 Team Workload Balance
-  **Status:** ✅ Well Distributed
-  `
-    }
-  ];
-
-  // Fetch insights from Spring Boot backend
+  const getToken = () => localStorage.getItem('auth_token') || '';
+  
   const fetchInsights = async () => {
     setIsLoading(true);
     setError(null);
-
     try {
-      const response = await fetch('/api/ai/insights');
-
+      const response = await fetch('/api/ai/insights', {
+        headers: {
+          'Authorization': `Bearer ${getToken()}`,
+        },
+      });
       if (!response.ok) throw new Error();
-
       const data = await response.json();
       setInsights(data);
-
     } catch (err) {
-      console.warn("⚠️ Backend not available, using mock data");
-
-      // 👇 fallback instead of error
-      setInsights(dummyInsights);
-
-      // optional: show softer message
-      setError(null); 
+      console.warn('⚠️ Backend not available, using mock data');
+      setInsights([]);
+      setError(null);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Generate new insights for current week
   const generateInsights = async () => {
     setIsGenerating(true);
     setError(null);
     try {
-      // Replace with your actual Spring Boot endpoint
       const response = await fetch('/api/ai/insights/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getToken()}`,
         },
       });
-
       if (!response.ok) {
         throw new Error('Failed to generate insights');
       }
-
       const newInsight = await response.json();
       setInsights([newInsight, ...insights]);
       setCurrentWeekIndex(0);
@@ -143,7 +91,6 @@ export function ChatBotPage() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold dark:text-white flex items-center gap-3">
@@ -156,7 +103,6 @@ export function ChatBotPage() {
             Weekly team performance insights powered by AI
           </p>
         </div>
-
         <Button
           onClick={generateInsights}
           disabled={isGenerating}
@@ -176,7 +122,6 @@ export function ChatBotPage() {
         </Button>
       </div>
 
-      {/* Error banner */}
       {error && (
         <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
@@ -187,7 +132,6 @@ export function ChatBotPage() {
         </div>
       )}
 
-      {/* Loading state */}
       {isLoading && (
         <Card>
           <CardContent className="p-12">
@@ -199,7 +143,6 @@ export function ChatBotPage() {
         </Card>
       )}
 
-      {/* Empty state */}
       {!isLoading && insights.length === 0 && !error && (
         <Card>
           <CardContent className="p-12">
@@ -235,10 +178,8 @@ export function ChatBotPage() {
         </Card>
       )}
 
-      {/* Insights display */}
       {!isLoading && currentInsight && (
         <div className="space-y-4">
-          {/* Week navigation */}
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -256,7 +197,6 @@ export function ChatBotPage() {
                     {currentWeekIndex + 1} of {insights.length}
                   </Badge>
                 </div>
-
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
@@ -279,7 +219,6 @@ export function ChatBotPage() {
             </CardContent>
           </Card>
 
-          {/* Insights content */}
           <Card>
             <CardHeader className="border-b border-gray-200 dark:border-gray-800">
               <CardTitle className="flex items-center gap-2 text-lg">

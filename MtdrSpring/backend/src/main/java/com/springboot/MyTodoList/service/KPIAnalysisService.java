@@ -1,45 +1,56 @@
 package com.springboot.MyTodoList.service;
 
+import com.springboot.MyTodoList.dto.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import java.util.List;
 
 @Service
 public class KPIAnalysisService {
-    
+
     @Autowired
     private AnalyticsService analyticsService;
-    
-    public VelocityData getVelocityTrends() {
-        // Use your existing analytics
-        // Calculate completion rate from tasks
-        return new VelocityData();
+
+    public String getVelocityTrends(Long userId) {
+        List<VelocityDTO> data = analyticsService.getVelocity(userId, 4);
+        if (data.isEmpty()) return "No velocity data available";
+        StringBuilder sb = new StringBuilder();
+        for (VelocityDTO v : data) {
+            sb.append(String.format("Week %s: %d created, %d completed. ",
+                v.getWeek(), v.getCreated(), v.getCompleted()));
+        }
+        return sb.toString();
     }
-    
-    public PriorityData getPriorityDistribution() {
-        // Use existing analytics
-        return new PriorityData();
+
+    public String getPriorityDistribution(Long userId) {
+        List<PriorityDistributionDTO> data = analyticsService.getPriorityDistribution(userId);
+        if (data.isEmpty()) return "No priority data available";
+        StringBuilder sb = new StringBuilder();
+        for (PriorityDistributionDTO p : data) {
+            sb.append(String.format("%s: %d tasks. ", p.getPriority(), p.getCount()));
+        }
+        return sb.toString();
     }
-    
-    public WorkloadData getWorkloadDistribution() {
-        // Use existing analytics
-        return new WorkloadData();
+
+    public String getWorkloadDistribution(Long userId) {
+        List<TaskDistributionDTO> data = analyticsService.getTaskDistribution(userId);
+        if (data.isEmpty()) return "No workload data available";
+        StringBuilder sb = new StringBuilder();
+        for (TaskDistributionDTO d : data) {
+            sb.append(String.format("%s: %d tasks (%.1f%%). ",
+                d.getUserName(), d.getTaskCount(), d.getPercentage()));
+        }
+        return sb.toString();
     }
-    
-    // Inner classes for data structures
-    public static class VelocityData {
-        private double completionRate;
-        // getters/setters
-    }
-    
-    public static class PriorityData {
-        private double highPriorityPercentage;
-        // getters/setters
-    }
-    
-    public static class WorkloadData {
-        private double imbalanceScore;
-        private String mostLoadedMember;
-        private String leastLoadedMember;
-        // getters/setters
+
+    public String getWorkedHours(Long userId) {
+        List<WorkedHoursDTO> data = analyticsService.getWorkedHoursPerUser(userId, 4);
+        if (data.isEmpty()) return "No worked hours data available";
+        StringBuilder sb = new StringBuilder();
+        for (WorkedHoursDTO w : data) {
+            sb.append(String.format("%s - %s: %d hours. ",
+                w.getWeek(), w.getUserName(), w.getHours()));
+        }
+        return sb.toString();
     }
 }
