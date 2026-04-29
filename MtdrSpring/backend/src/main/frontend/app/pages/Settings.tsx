@@ -8,9 +8,27 @@ import { Label } from '../components/ui/label';
 import { Switch } from '../components/ui/switch';
 import { Separator } from '../components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { User, Bell, MessageSquare, CheckCircle2, Copy, RefreshCw, Clock } from 'lucide-react';
+import { Textarea } from '../components/ui/textarea';
+import { User, Bell, MessageSquare, CheckCircle2, Copy, RefreshCw, Clock, Loader2 } from 'lucide-react';
 import { defaultNotificationSettings } from '../data/mockData';
 import { toast } from 'sonner';
+
+// ── Profile API helper ────────────────────────────────────────────────────────
+
+async function updateProfile(
+  token: string,
+  data: { name: string; email: string; bio: string }
+): Promise<void> {
+  const res = await fetch('/api/users/profile', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const msg = await res.text().catch(() => res.statusText);
+    throw new Error(msg || `HTTP ${res.status}`);
+  }
+}
 
 // ── API helper ────────────────────────────────────────────────────────────────
 
@@ -38,7 +56,9 @@ export function Settings() {
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
     email: user?.email || '',
+    bio: (user as any)?.bio || '',
   });
+  const [profileSaving, setProfileSaving] = useState(false);
 
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(
     defaultNotificationSettings
@@ -57,9 +77,17 @@ export function Settings() {
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
-  const handleProfileSave = (e: React.FormEvent) => {
+  const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success('Profile updated successfully!');
+    setProfileSaving(true);
+    try {
+      await updateProfile(getToken(), profileData);
+      toast.success('Profile updated successfully!');
+    } catch (err: any) {
+      toast.error(`Failed to save profile: ${err.message}`);
+    } finally {
+      setProfileSaving(false);
+    }
   };
 
   const handleNotificationSave = () => {
@@ -169,6 +197,17 @@ export function Settings() {
                     />
                   </div>
                   <div>
+                    <Label htmlFor="bio">Bio</Label>
+                    <Textarea
+                      id="bio"
+                      value={profileData.bio}
+                      onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
+                      placeholder="Tell your team a little about yourself…"
+                      rows={3}
+                      className="resize-none"
+                    />
+                  </div>
+                  <div>
                     <Label htmlFor="role">Role</Label>
                     <Input
                       id="role"
@@ -180,7 +219,11 @@ export function Settings() {
                 </div>
 
                 <div className="flex justify-end">
-                  <Button type="submit">Save Changes</Button>
+                  <Button type="submit" disabled={profileSaving}>
+                    {profileSaving
+                      ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</>
+                      : 'Save Changes'}
+                  </Button>
                 </div>
               </form>
             </CardContent>
@@ -313,26 +356,26 @@ export function Settings() {
                 </h4>
                 <ol className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
                   <li className="flex gap-3">
-                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-xs font-bold">1</span>
+                    <span className="shrink-0 w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-xs font-bold">1</span>
                     <span>
                       Click <strong>"Generate Join Code"</strong> below to get a one-time code valid for 15 minutes.
                     </span>
                   </li>
                   <li className="flex gap-3">
-                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-xs font-bold">2</span>
+                    <span className="shrink-0 w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-xs font-bold">2</span>
                     <span>
                       Open Telegram and find the bot{' '}
                       <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">@YourBotName</code>.
                     </span>
                   </li>
                   <li className="flex gap-3">
-                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-xs font-bold">3</span>
+                    <span className="shrink-0 w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-xs font-bold">3</span>
                     <span>
                       Send the command <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">/ConfigUser</code> to the bot.
                     </span>
                   </li>
                   <li className="flex gap-3">
-                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-xs font-bold">4</span>
+                    <span className="shrink-0 w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-xs font-bold">4</span>
                     <span>
                       Paste the join code when the bot asks for it.
                     </span>

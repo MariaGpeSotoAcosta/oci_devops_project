@@ -40,6 +40,9 @@ public class AppUser {
     @Column(name = "TELEGRAM_CHAT_ID", unique = true)
     private Long telegramChatId;
 
+    @Column(name = "BIO", length = 500)
+    private String bio;
+
     @Column(name = "CREATED_AT")
     private LocalDateTime createdAt;
 
@@ -75,6 +78,9 @@ public class AppUser {
 
     public Long getTelegramChatId()                { return telegramChatId; }
     public void setTelegramChatId(Long v)          { this.telegramChatId = v; }
+
+    public String getBio()              { return bio; }
+    public void   setBio(String bio)    { this.bio = bio; }
 
     public LocalDateTime getCreatedAt()            { return createdAt; }
     public void setCreatedAt(LocalDateTime v)      { this.createdAt = v; }
