@@ -47,6 +47,12 @@ public class WebSecurityConfiguration {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/ai/**").permitAll()
+                // Static frontend resources (React app)
+                .requestMatchers("/", "/index.html", "/assets/**", "/*.js", "/*.css",
+                        "/*.ico", "/*.png", "/*.svg", "/static/**").permitAll()
+                // Swagger UI
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                // All other endpoints require a valid JWT
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

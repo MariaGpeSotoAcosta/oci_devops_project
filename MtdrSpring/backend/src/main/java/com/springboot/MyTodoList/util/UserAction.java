@@ -6,6 +6,5 @@ public enum UserAction {
     MOD_WORKED,
     MOD_EXPECTED,
     CREATE_TASK,
-    CONFIG_USER,
     NONE
 }

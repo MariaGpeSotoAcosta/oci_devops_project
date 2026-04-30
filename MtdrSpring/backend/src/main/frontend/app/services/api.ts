@@ -335,6 +335,18 @@ export interface TaskDistributionPoint {
   percentage: number;
 }
 
+export interface SprintKpiPoint {
+  sprintId: string | null;
+  sprintName: string;
+  projectId: string;
+  projectName: string;
+  totalTasks: number;
+  completedTasks: number;
+  totalHoursWorked: number;
+  totalHoursEstimated: number;
+  completionRate: number;
+}
+
 export const analyticsApi = {
   getVelocity: async (weeks = 8): Promise<VelocityPoint[]> => {
     const res = await fetch(`${API_BASE_URL}/analytics/velocity?weeks=${weeks}`, {
@@ -362,6 +374,16 @@ export const analyticsApi = {
       headers: authHeaders(),
     });
     return handleResponse<TaskDistributionPoint[]>(res);
+  },
+
+  /** GET /api/analytics/kpis?projectId=X&sprintId=Y (sprintId optional) */
+  getSprintKpis: async (projectId: string, sprintId?: string): Promise<SprintKpiPoint> => {
+    const params = new URLSearchParams({ projectId });
+    if (sprintId) params.append('sprintId', sprintId);
+    const res = await fetch(`${API_BASE_URL}/analytics/kpis?${params}`, {
+      headers: authHeaders(),
+    });
+    return handleResponse<SprintKpiPoint>(res);
   },
 };
 

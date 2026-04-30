@@ -75,9 +75,6 @@ export default function Root() {
 
   if (!isAuthenticated) return null;
 
-  const projectSprints = sprints.filter((s) => (s as any).projectId === selectedProjectId);
-  const currentSprint = projectSprints.find((s) => s.status === 'active') ?? null;
-  const sprintTasks = tasks.filter((t) => t.sprintId === currentSprint?.id);
 
   // ── Task handlers (real API) ──────────────────────────────────
 
@@ -155,6 +152,11 @@ export default function Root() {
     }
   };
 
+  const handleCreateSprint = async (sprint: Sprint) => {
+    // SprintCreateDialog already called the API; just append to local state
+    setSprints((prev) => [...prev, sprint]);
+  };
+
   const handleDeleteProject = async (projectId: string) => {
     try {
       await projectsApi.delete(projectId);
@@ -219,7 +221,7 @@ export default function Root() {
         onUpdateTask={handleUpdateTask}
         onCreateTask={handleCreateTask}
         onDeleteTask={handleDeleteTask}
-        currentSprint={currentSprint}
+        onCreateSprint={handleCreateSprint}
       />
     );
   } else if (path === '/backlog') {
@@ -227,10 +229,11 @@ export default function Root() {
       <Backlog
         tasks={tasks}
         projects={projects}
+        sprints={sprints}
         onUpdateTask={handleUpdateTask}
         onCreateTask={handleCreateTask}
         onDeleteTask={handleDeleteTask}
-        sprints={projectSprints}
+        onCreateSprint={handleCreateSprint}
       />
     );
   } else if (path === '/projects') {
