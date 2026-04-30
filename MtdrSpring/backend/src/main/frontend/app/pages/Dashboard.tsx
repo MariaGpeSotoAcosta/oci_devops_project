@@ -142,7 +142,6 @@ export function Dashboard({
   const [distributionData, setDistributionData] = useState<TaskDistributionPoint[]>([]);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [analyticsError, setAnalyticsError] = useState<string | null>(null);
-  const [weeksFilter, setWeeksFilter] = useState('8');
 
   // ── KPI filter state ───────────────────────────────────────────
   const [allProjects, setAllProjects] = useState<Project[]>([]);
@@ -159,17 +158,18 @@ export function Dashboard({
   const totalWorked = tasks.reduce((s, t) => s + (t.workedHours || 0), 0);
   const activeSprints = sprints.filter((s) => s.status === 'active');
 
-  // ── Fetch analytics (only when authenticated) ─────────────────
+  // ── Fetch analytics whenever project/sprint selection changes ──
   useEffect(() => {
     if (!isAuthenticated) return;
-    const weeks = parseInt(weeksFilter, 10);
+    const pid = selectedProjectId || undefined;
+    const sid = selectedSprintId || undefined;
     setAnalyticsLoading(true);
     setAnalyticsError(null);
     Promise.all([
-      analyticsApi.getVelocity(weeks),
-      analyticsApi.getPriorityDistribution(),
-      analyticsApi.getWorkedHours(weeks),
-      analyticsApi.getTaskDistribution(),
+      analyticsApi.getVelocity(12, pid, sid),
+      analyticsApi.getPriorityDistribution(pid, sid),
+      analyticsApi.getWorkedHours(12, pid, sid),
+      analyticsApi.getTaskDistribution(pid, sid),
     ])
       .then(([vel, pri, wh, dist]) => {
         setVelocityData(vel);
@@ -182,7 +182,7 @@ export function Dashboard({
         setAnalyticsError('Could not load analytics data. Make sure the backend is running.');
       })
       .finally(() => setAnalyticsLoading(false));
-  }, [weeksFilter, isAuthenticated]);
+  }, [isAuthenticated, selectedProjectId, selectedSprintId]);
 
   // ── Load all projects once on mount ───────────────────────────
   useEffect(() => {
@@ -341,23 +341,6 @@ export function Dashboard({
               </Select>
             </div>
 
-            {/* Week selector (secondary filter for the charts below) */}
-            <div className="flex-1 min-w-36">
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5" /> Chart range
-              </p>
-              <Select value={weeksFilter} onValueChange={setWeeksFilter}>
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="4">Last 4 weeks</SelectItem>
-                  <SelectItem value="8">Last 8 weeks</SelectItem>
-                  <SelectItem value="12">Last 12 weeks</SelectItem>
-                  <SelectItem value="24">Last 24 weeks</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
         </CardContent>
       </Card>
