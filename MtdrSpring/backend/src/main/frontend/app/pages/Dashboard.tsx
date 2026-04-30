@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router';
 import { Task, Activity, Sprint, Project } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useTeam } from '../context/TeamContext';
 import {
   analyticsApi,
+  projectsApi,
+  sprintsApi,
   VelocityPoint,
   PriorityPoint,
   WorkedHoursPoint,
   TaskDistributionPoint,
+  SprintKpiPoint,
 } from '../services/api';
 import {
   Card,
@@ -41,6 +43,8 @@ import {
   PieChartIcon,
   Users,
   Zap,
+  FolderKanban,
+  ListChecks,
 } from 'lucide-react';
 import {
   BarChart,
@@ -54,8 +58,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
 } from 'recharts';
 
 // ── Chart color palette ────────────────────────────────────────────────────────
@@ -70,7 +72,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 
 // ── Custom pie label renderer ─────────────────────────────────────────────────
 const renderPieLabel = ({
-  cx, cy, midAngle, innerRadius, outerRadius, percent, name,
+  cx, cy, midAngle, innerRadius, outerRadius, percent,
 }: any) => {
   if (percent < 0.04) return null;
   const RADIAN = Math.PI / 180;
@@ -142,6 +144,14 @@ export function Dashboard({
   const [analyticsError, setAnalyticsError] = useState<string | null>(null);
   const [weeksFilter, setWeeksFilter] = useState('8');
 
+  // ── KPI filter state ───────────────────────────────────────────
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
+  const [sprintsForProject, setSprintsForProject] = useState<Sprint[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [selectedSprintId, setSelectedSprintId] = useState<string>('');
+  const [sprintKpi, setSprintKpi] = useState<SprintKpiPoint | null>(null);
+  const [kpiLoading, setKpiLoading] = useState(false);
+
   // ── Stats (computed from real task props) ──────────────────────
   const inProgressTasks = tasks.filter((t) => t.status === 'in-progress');
   const doneTasks = tasks.filter((t) => t.status === 'done');
@@ -173,6 +183,40 @@ export function Dashboard({
       })
       .finally(() => setAnalyticsLoading(false));
   }, [weeksFilter, isAuthenticated]);
+
+  // ── Load all projects once on mount ───────────────────────────
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    projectsApi.getAll()
+      .then((data) => {
+        setAllProjects(data);
+        if (data.length > 0) setSelectedProjectId(data[0].id);
+      })
+      .catch((err) => console.error('Failed to load projects:', err));
+  }, [isAuthenticated]);
+
+  // ── Load sprints whenever selected project changes ─────────────
+  useEffect(() => {
+    if (!selectedProjectId) { setSprintsForProject([]); setSelectedSprintId(''); return; }
+    sprintsApi.getByProject(selectedProjectId)
+      .then((data) => {
+        setSprintsForProject(data);
+        // Auto-select the active sprint, or the first one
+        const active = data.find((s) => s.status === 'active');
+        setSelectedSprintId(active ? active.id : data.length > 0 ? data[0].id : '');
+      })
+      .catch((err) => console.error('Failed to load sprints:', err));
+  }, [selectedProjectId]);
+
+  // ── Fetch KPI whenever project or sprint selection changes ─────
+  useEffect(() => {
+    if (!selectedProjectId) { setSprintKpi(null); return; }
+    setKpiLoading(true);
+    analyticsApi.getSprintKpis(selectedProjectId, selectedSprintId || undefined)
+      .then(setSprintKpi)
+      .catch((err) => console.error('Failed to load KPIs:', err))
+      .finally(() => setKpiLoading(false));
+  }, [selectedProjectId, selectedSprintId]);
 
   // ── Transform worked-hours flat list → stacked bar format ──────
   const workedHoursChartData = (() => {
@@ -248,6 +292,170 @@ export function Dashboard({
         )}
       </div>
 
+      {/* ── KPI Filters: Project · Sprint · Week ────────────── */}
+      <Card className="border-[#30c2b7]/30">
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-end gap-4">
+            {/* Project selector */}
+            <div className="flex-1 min-w-40">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 flex items-center gap-1">
+                <FolderKanban className="w-3.5 h-3.5" /> Project
+              </p>
+              <Select value={selectedProjectId} onValueChange={(v) => { setSelectedProjectId(v); setSelectedSprintId(''); }}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Select project…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allProjects.length === 0
+                    ? <SelectItem value="__none" disabled>No projects yet</SelectItem>
+                    : allProjects.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                      ))
+                  }
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Sprint selector */}
+            <div className="flex-1 min-w-40">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 flex items-center gap-1">
+                <ListChecks className="w-3.5 h-3.5" /> Sprint
+              </p>
+              <Select
+                value={selectedSprintId || '__all'}
+                onValueChange={(v) => setSelectedSprintId(v === '__all' ? '' : v)}
+                disabled={!selectedProjectId || sprintsForProject.length === 0}
+              >
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder={sprintsForProject.length === 0 ? 'No sprints' : 'All sprints'} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all">All sprints</SelectItem>
+                  {sprintsForProject.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.status === 'active' ? '🟢 ' : s.status === 'completed' ? '✅ ' : '📋 '}
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Week selector (secondary filter for the charts below) */}
+            <div className="flex-1 min-w-36">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5" /> Chart range
+              </p>
+              <Select value={weeksFilter} onValueChange={setWeeksFilter}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="4">Last 4 weeks</SelectItem>
+                  <SelectItem value="8">Last 8 weeks</SelectItem>
+                  <SelectItem value="12">Last 12 weeks</SelectItem>
+                  <SelectItem value="24">Last 24 weeks</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Sprint KPI Summary Cards ─────────────────────────── */}
+      {selectedProjectId && (
+        <div>
+          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+            {sprintKpi
+              ? `${sprintKpi.projectName} — ${sprintKpi.sprintName}`
+              : 'Sprint KPIs'}
+          </h2>
+
+          {kpiLoading ? (
+            <div className="flex items-center gap-2 text-sm text-gray-400 py-4">
+              <Loader2 className="w-4 h-4 animate-spin" /> Loading KPI data…
+            </div>
+          ) : sprintKpi ? (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+
+              {/* Hours Worked */}
+              <Card className="border-t-4 border-t-[#30c2b7]">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Hours Worked</p>
+                      <p className="text-2xl font-semibold dark:text-white">{sprintKpi.totalHoursWorked}h</p>
+                      <p className="text-xs text-gray-400 mt-0.5">of {sprintKpi.totalHoursEstimated}h estimated</p>
+                    </div>
+                    <div className="w-10 h-10 bg-teal-100 dark:bg-teal-900/40 rounded-lg flex items-center justify-center">
+                      <Clock className="w-5 h-5 text-[#30c2b7]" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Tasks Completed */}
+              <Card className="border-t-4 border-t-green-500">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Tasks Completed</p>
+                      <p className="text-2xl font-semibold dark:text-white">{sprintKpi.completedTasks}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">of {sprintKpi.totalTasks} total</p>
+                    </div>
+                    <div className="w-10 h-10 bg-green-100 dark:bg-green-900/40 rounded-lg flex items-center justify-center">
+                      <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Completion Rate */}
+              <Card className="border-t-4 border-t-indigo-500">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Completion Rate</p>
+                      <p className="text-2xl font-semibold dark:text-white">{sprintKpi.completionRate}%</p>
+                      <div className="mt-1 h-1.5 w-24 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+                          style={{ width: `${sprintKpi.completionRate}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/40 rounded-lg flex items-center justify-center">
+                      <Target className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Remaining Tasks */}
+              <Card className="border-t-4 border-t-orange-400">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Remaining</p>
+                      <p className="text-2xl font-semibold dark:text-white">
+                        {sprintKpi.totalTasks - sprintKpi.completedTasks}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">tasks in progress</p>
+                    </div>
+                    <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/40 rounded-lg flex items-center justify-center">
+                      <TrendingUp className="w-5 h-5 text-orange-500" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 py-2">Select a project to see KPI data.</p>
+          )}
+        </div>
+      )}
+
       {/* ── Stats grid ──────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
@@ -311,26 +519,12 @@ export function Dashboard({
         </Card>
       </div>
 
-      {/* ── Time range filter + error banner ────────────────── */}
-      <div className="flex items-center justify-between">
+      {/* ── Chart section header + error banner ─────────────── */}
+      <div className="flex items-center gap-2">
         <h2 className="text-lg font-semibold dark:text-white flex items-center gap-2">
           <BarChart3 className="w-5 h-5 text-[#30c2b7]" />
-          KPI Dashboard
+          Team Analytics Charts
         </h2>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500 dark:text-gray-400">Time range:</span>
-          <Select value={weeksFilter} onValueChange={setWeeksFilter}>
-            <SelectTrigger className="w-36 h-8 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="4">Last 4 weeks</SelectItem>
-              <SelectItem value="8">Last 8 weeks</SelectItem>
-              <SelectItem value="12">Last 12 weeks</SelectItem>
-              <SelectItem value="24">Last 24 weeks</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
       </div>
 
       {analyticsError && (
@@ -401,7 +595,7 @@ formatter={(val: number, name: string) => [val, name]}                  />
                       labelLine={false}
                       label={renderPieLabel}
                     >
-                      {priorityChartData.map((entry, i) => (
+                      {priorityChartData.map((entry) => (
                         <Cell key={entry.priority} fill={entry.fill} />
                       ))}
                     </Pie>
