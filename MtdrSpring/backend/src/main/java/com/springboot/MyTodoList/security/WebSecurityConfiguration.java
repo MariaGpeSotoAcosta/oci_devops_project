@@ -44,10 +44,9 @@ public class WebSecurityConfiguration {
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // Allow preflight CORS requests
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                // Auth endpoints are public
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/ai/**").permitAll()
                 // Static frontend resources (React app)
                 .requestMatchers("/", "/index.html", "/assets/**", "/*.js", "/*.css",
                         "/*.ico", "/*.png", "/*.svg", "/static/**").permitAll()
