@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Task, TaskPriority, TaskStatus, TaskType, Project, Sprint, TeamMember } from '../types';
+import { Task, TaskPriority, TaskStatus, Project, Sprint, TeamMember } from '../types';
 import { useTeam } from '../context/TeamContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Label } from './ui/label';
@@ -360,44 +360,22 @@ export function TaskDialog({
             </div>
           </div>
 
-          {/* Type + Estimated Hours */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="td-type" className="text-gray-700 dark:text-gray-300">
-                Type
-              </Label>
-              <Select
-                value={formData.type ?? 'task'}
-                onValueChange={(v) => setFormData({ ...formData, type: v as TaskType })}
-              >
-                <SelectTrigger id="td-type" className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="story">Story</SelectItem>
-                  <SelectItem value="task">Task</SelectItem>
-                  <SelectItem value="bug">Bug</SelectItem>
-                  <SelectItem value="epic">Epic</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="td-hours" className="text-gray-700 dark:text-gray-300">
-                Estimated Hours
-              </Label>
-              <Input
-                id="td-hours"
-                type="number"
-                min="1"
-                max="999"
-                value={formData.storyPoints ?? 1}
-                onChange={(e) =>
-                  setFormData({ ...formData, storyPoints: parseInt(e.target.value) || 1 })
-                }
-                className="mt-1"
-              />
-            </div>
+          {/* Estimated Hours */}
+          <div>
+            <Label htmlFor="td-hours" className="text-gray-700 dark:text-gray-300">
+              Estimated Hours
+            </Label>
+            <Input
+              id="td-hours"
+              type="number"
+              min="1"
+              max="999"
+              value={formData.storyPoints ?? 1}
+              onChange={(e) =>
+                setFormData({ ...formData, storyPoints: parseInt(e.target.value) || 1 })
+              }
+              className="mt-1"
+            />
           </div>
 
           {/* Worked Hours */}

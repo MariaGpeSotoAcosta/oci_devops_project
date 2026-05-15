@@ -36,6 +36,8 @@ public class BotActions {
         exit = false;
     }
 
+    // ── Setters ───────────────────────────────────────────────────
+
     public void setRequestText(String cmd) {
         requestText = cmd;
     }
@@ -96,6 +98,7 @@ public class BotActions {
     }
 
     public void fnElse() {
+        if (exit) return;
         UserSession session = getSession();
 
         if (session.getState() != ConversationState.NONE)
@@ -111,39 +114,46 @@ public class BotActions {
 
             session.setTaskId(requestText);
 
-            switch (session.getAction()) {
+        switch (session.getAction()) {
+            case MOD_NAME:
+                session.setState(ConversationState.WAITING_NAME);
+                send(BotMessages.MOD_NAME.getMessage());
+                break;
+            case MOD_STATUS:
+                session.setState(ConversationState.WAITING_STATUS);
+                sendKb(BotMessages.MOD_STATUS.getMessage(), buildStatusKeyboard());
+                break;
+            case MOD_WORKED:
+                session.setState(ConversationState.WAITING_WORKED);
+                send(BotMessages.MOD_WORKED.getMessage());
+                break;
+            case MOD_EXPECTED:
+                session.setState(ConversationState.WAITING_EXPECTED);
+                send(BotMessages.MOD_EXPECTED.getMessage());
+                break;
+            default:
+                return false;
+        }
+        return true;
+    }
 
-                case MOD_NAME:
-                    session.setState(ConversationState.WAITING_NAME);
-                    BotHelper.sendMessageToTelegram(chatId, BotMessages.MOD_NAME.getMessage(), telegramClient, null);
-                    break;
-
-                case MOD_STATUS:
-                    session.setState(ConversationState.WAITING_STATUS);
-                    BotHelper.sendMessageToTelegram(chatId, BotMessages.MOD_STATUS.getMessage(), telegramClient, null);
-                    break;
-
-                case MOD_WORKED:
-                    session.setState(ConversationState.WAITING_WORKED);
-                    BotHelper.sendMessageToTelegram(chatId, BotMessages.MOD_WORKED.getMessage(), telegramClient, null);
-                    break;
-
-                case MOD_EXPECTED:
-                    session.setState(ConversationState.WAITING_EXPECTED);
-                    BotHelper.sendMessageToTelegram(chatId, BotMessages.MOD_EXPECTED.getMessage(), telegramClient, null);
-                    break;
-
-                default:
-                    return false;
-            }
-
+    /**
+     * Modify flow step 2 — user provides the new value, we call TaskService.
+     */
+    private boolean handleModifyValue(UserSession session) {
+        Long taskId;
+        try {
+            taskId = Long.parseLong(session.getTaskId());
+        } catch (NumberFormatException e) {
+            send("🚨 Invalid task ID: \"" + session.getTaskId() + "\". Please use a numeric ID.");
+            session.resetConversation();
             return true;
         }
 
         if (session.getState() != ConversationState.NONE &&
             session.getAction() != UserAction.CREATE_TASK) {
 
-            switch (session.getAction()) {
+        switch (session.getAction()) {
 
                 case MOD_NAME:
                     break;
@@ -157,9 +167,9 @@ public class BotActions {
                 case MOD_EXPECTED:
                     break;
 
-                default:
-                    return false;
-            }
+            default:
+                return false;
+        }
 
             session.setState(ConversationState.NONE);
             session.setAction(UserAction.NONE);

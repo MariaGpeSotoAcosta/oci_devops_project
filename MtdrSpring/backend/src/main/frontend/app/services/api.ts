@@ -335,33 +335,61 @@ export interface TaskDistributionPoint {
   percentage: number;
 }
 
+export interface SprintKpiPoint {
+  sprintId: string | null;
+  sprintName: string;
+  projectId: string;
+  projectName: string;
+  totalTasks: number;
+  completedTasks: number;
+  totalHoursWorked: number;
+  totalHoursEstimated: number;
+  completionRate: number;
+}
+
 export const analyticsApi = {
-  getVelocity: async (weeks = 8): Promise<VelocityPoint[]> => {
-    const res = await fetch(`${API_BASE_URL}/analytics/velocity?weeks=${weeks}`, {
-      headers: authHeaders(),
-    });
+  getVelocity: async (weeks = 8, projectId?: string, sprintId?: string): Promise<VelocityPoint[]> => {
+    const p = new URLSearchParams({ weeks: String(weeks) });
+    if (projectId) p.set('projectId', projectId);
+    if (sprintId) p.set('sprintId', sprintId);
+    const res = await fetch(`${API_BASE_URL}/analytics/velocity?${p}`, { headers: authHeaders() });
     return handleResponse<VelocityPoint[]>(res);
   },
 
-  getPriorityDistribution: async (): Promise<PriorityPoint[]> => {
-    const res = await fetch(`${API_BASE_URL}/analytics/priority`, {
-      headers: authHeaders(),
-    });
+  getPriorityDistribution: async (projectId?: string, sprintId?: string): Promise<PriorityPoint[]> => {
+    const p = new URLSearchParams();
+    if (projectId) p.set('projectId', projectId);
+    if (sprintId) p.set('sprintId', sprintId);
+    const query = p.toString() ? `?${p}` : '';
+    const res = await fetch(`${API_BASE_URL}/analytics/priority${query}`, { headers: authHeaders() });
     return handleResponse<PriorityPoint[]>(res);
   },
 
-  getWorkedHours: async (weeks = 8): Promise<WorkedHoursPoint[]> => {
-    const res = await fetch(`${API_BASE_URL}/analytics/worked-hours?weeks=${weeks}`, {
-      headers: authHeaders(),
-    });
+  getWorkedHours: async (weeks = 8, projectId?: string, sprintId?: string): Promise<WorkedHoursPoint[]> => {
+    const p = new URLSearchParams({ weeks: String(weeks) });
+    if (projectId) p.set('projectId', projectId);
+    if (sprintId) p.set('sprintId', sprintId);
+    const res = await fetch(`${API_BASE_URL}/analytics/worked-hours?${p}`, { headers: authHeaders() });
     return handleResponse<WorkedHoursPoint[]>(res);
   },
 
-  getTaskDistribution: async (): Promise<TaskDistributionPoint[]> => {
-    const res = await fetch(`${API_BASE_URL}/analytics/task-distribution`, {
+  getTaskDistribution: async (projectId?: string, sprintId?: string): Promise<TaskDistributionPoint[]> => {
+    const p = new URLSearchParams();
+    if (projectId) p.set('projectId', projectId);
+    if (sprintId) p.set('sprintId', sprintId);
+    const query = p.toString() ? `?${p}` : '';
+    const res = await fetch(`${API_BASE_URL}/analytics/task-distribution${query}`, { headers: authHeaders() });
+    return handleResponse<TaskDistributionPoint[]>(res);
+  },
+
+  /** GET /api/analytics/kpis?projectId=X&sprintId=Y (sprintId optional) */
+  getSprintKpis: async (projectId: string, sprintId?: string): Promise<SprintKpiPoint> => {
+    const params = new URLSearchParams({ projectId });
+    if (sprintId) params.append('sprintId', sprintId);
+    const res = await fetch(`${API_BASE_URL}/analytics/kpis?${params}`, {
       headers: authHeaders(),
     });
-    return handleResponse<TaskDistributionPoint[]>(res);
+    return handleResponse<SprintKpiPoint>(res);
   },
 };
 
@@ -389,5 +417,76 @@ export const sprintsApi = {
       body: JSON.stringify(data),
     });
     return handleResponse<Sprint>(res);
+  },
+};
+
+// ==================== AI API ====================
+// Add this to your existing services/api.ts file or create a new aiInsightsApi.ts
+
+export interface AIInsight {
+  week: string;
+  content: string;
+  generatedAt: string;
+}
+
+export const aiInsightsApi = {
+  /**
+   * Fetch all AI insights from the backend
+   */
+  async getInsights(): Promise<AIInsight[]> {
+    const response = await fetch('/api/ai/insights', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        // Add authorization header if needed
+        // 'Authorization': `Bearer ${getAuthToken()}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch insights: ${response.statusText}`);
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Generate new AI insights based on current KPI data
+   */
+  async generateInsights(): Promise<AIInsight> {
+    const response = await fetch('/api/ai/insights/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to generate insights: ${response.statusText}`);
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Get insights for a specific week
+   */
+  async getInsightsByWeek(week: string): Promise<AIInsight | null> {
+    const response = await fetch(`/api/ai/insights/week/${week}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.status === 404) {
+      return null;
+    }
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch insight for week ${week}: ${response.statusText}`);
+    }
+
+    return response.json();
   },
 };

@@ -3,11 +3,13 @@ package com.springboot.MyTodoList.service;
 import com.springboot.MyTodoList.dto.*;
 import com.springboot.MyTodoList.model.AppUser;
 import com.springboot.MyTodoList.model.Project;
+import com.springboot.MyTodoList.model.Sprint;
 import com.springboot.MyTodoList.model.Task;
 import com.springboot.MyTodoList.model.Team;
 import com.springboot.MyTodoList.model.TeamMembership;
 import com.springboot.MyTodoList.repository.AppUserRepository;
 import com.springboot.MyTodoList.repository.ProjectRepository;
+import com.springboot.MyTodoList.repository.SprintRepository;
 import com.springboot.MyTodoList.repository.TaskRepository;
 import com.springboot.MyTodoList.repository.TeamMembershipRepository;
 import org.slf4j.Logger;
@@ -28,12 +30,24 @@ public class AnalyticsService {
 
     @Autowired private TaskRepository taskRepository;
     @Autowired private ProjectRepository projectRepository;
+    @Autowired private SprintRepository sprintRepository;
     @Autowired private AppUserRepository userRepository;
     @Autowired private TeamMembershipRepository membershipRepository;
 
     // ─────────────────────────────────────────────────────────────
-    // SHARED HELPER: fetch all tasks visible to a user's teams
+    // SHARED HELPERS
     // ─────────────────────────────────────────────────────────────
+
+    /** Returns tasks filtered by project+sprint when provided, otherwise all team tasks. */
+    private List<Task> getFilteredTasks(Long userId, Long projectId, Long sprintId) {
+        if (projectId != null && sprintId != null) {
+            return taskRepository.findByProjectIdAndSprintId(projectId, sprintId);
+        }
+        if (projectId != null) {
+            return taskRepository.findByProjectId(projectId);
+        }
+        return getTasksForUser(userId);
+    }
 
     private List<Task> getTasksForUser(Long userId) {
         log.debug("🔍 [LOOKUP] Fetching tasks for user {}", userId);
@@ -84,10 +98,10 @@ public class AnalyticsService {
     // 1. VELOCITY: tasks created vs completed per week
     // ─────────────────────────────────────────────────────────────
 
-    public List<VelocityDTO> getVelocity(Long userId, int weeks) {
-        log.info("🚀 [ANALYTICS] Computing velocity for user {} — last {} weeks", userId, weeks);
+    public List<VelocityDTO> getVelocity(Long userId, int weeks, Long projectId, Long sprintId) {
+        log.info("🚀 [ANALYTICS] Computing velocity for user {} — last {} weeks, project={}, sprint={}", userId, weeks, projectId, sprintId);
 
-        List<Task> tasks = getTasksForUser(userId);
+        List<Task> tasks = getFilteredTasks(userId, projectId, sprintId);
         List<String> weekLabels = lastNWeekLabels(weeks);
 
         // Count created per week
@@ -122,10 +136,10 @@ public class AnalyticsService {
     // 2. PRIORITY DISTRIBUTION
     // ─────────────────────────────────────────────────────────────
 
-    public List<PriorityDistributionDTO> getPriorityDistribution(Long userId) {
-        log.info("🔥 [ANALYTICS] Computing priority distribution for user {}", userId);
+    public List<PriorityDistributionDTO> getPriorityDistribution(Long userId, Long projectId, Long sprintId) {
+        log.info("🔥 [ANALYTICS] Computing priority distribution for user {}, project={}, sprint={}", userId, projectId, sprintId);
 
-        List<Task> tasks = getTasksForUser(userId);
+        List<Task> tasks = getFilteredTasks(userId, projectId, sprintId);
 
         Map<String, Long> counts = tasks.stream()
                 .filter(t -> t.getPriority() != null)
@@ -146,10 +160,10 @@ public class AnalyticsService {
     // 3. WORKED HOURS PER USER PER WEEK
     // ─────────────────────────────────────────────────────────────
 
-    public List<WorkedHoursDTO> getWorkedHoursPerUser(Long userId, int weeks) {
-        log.info("⏱️ [ANALYTICS] Computing worked hours per user for user {} — last {} weeks", userId, weeks);
+    public List<WorkedHoursDTO> getWorkedHoursPerUser(Long userId, int weeks, Long projectId, Long sprintId) {
+        log.info("⏱️ [ANALYTICS] Computing worked hours per user for user {} — last {} weeks, project={}, sprint={}", userId, weeks, projectId, sprintId);
 
-        List<Task> tasks = getTasksForUser(userId);
+        List<Task> tasks = getFilteredTasks(userId, projectId, sprintId);
         List<String> weekLabels = lastNWeekLabels(weeks);
 
         // key: "week|userName" → sum of workedHours
@@ -180,13 +194,60 @@ public class AnalyticsService {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 4. TASK DISTRIBUTION BY TEAM MEMBER (percentages)
+    // 4. SPRINT KPIs: hours worked, tasks completed, completion rate
+    //    Filters: projectId (required), sprintId (optional)
     // ─────────────────────────────────────────────────────────────
 
-    public List<TaskDistributionDTO> getTaskDistribution(Long userId) {
-        log.info("👥 [ANALYTICS] Computing task distribution for user {}", userId);
+    public SprintKpiDTO getSprintKpis(Long userId, Long projectId, Long sprintId) {
+        log.info("📊 [ANALYTICS] Computing sprint KPIs - user: {}, project: {}, sprint: {}", userId, projectId, sprintId);
 
-        List<Task> tasks = getTasksForUser(userId);
+        // Validate the project exists and the user has access (belongs to a team that owns it)
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Project not found: " + projectId));
+
+        List<Task> tasks;
+        String sprintName = "All Sprints";
+
+        if (sprintId != null) {
+            Sprint sprint = sprintRepository.findById(sprintId)
+                    .orElseThrow(() -> new RuntimeException("Sprint not found: " + sprintId));
+            sprintName = sprint.getName();
+            tasks = taskRepository.findByProjectIdAndSprintId(projectId, sprintId);
+        } else {
+            tasks = taskRepository.findByProjectId(projectId);
+        }
+
+        int totalTasks      = tasks.size();
+        int completedTasks  = (int) tasks.stream().filter(t -> "done".equals(t.getStatus())).count();
+        int hoursWorked     = tasks.stream().mapToInt(t -> t.getWorkedHours()  != null ? t.getWorkedHours()  : 0).sum();
+        int hoursEstimated  = tasks.stream().mapToInt(t -> t.getStoryPoints()  != null ? t.getStoryPoints()  : 0).sum();
+        double completionRate = totalTasks == 0 ? 0.0
+                : Math.round((completedTasks * 100.0 / totalTasks) * 10.0) / 10.0;
+
+        log.info("✅ [ANALYTICS] Sprint KPIs — project: '{}', sprint: '{}', tasks: {}/{}, hours: {}h worked / {}h estimated",
+                project.getName(), sprintName, completedTasks, totalTasks, hoursWorked, hoursEstimated);
+
+        return new SprintKpiDTO(
+                sprintId != null ? sprintId.toString() : null,
+                sprintName,
+                projectId.toString(),
+                project.getName(),
+                totalTasks,
+                completedTasks,
+                hoursWorked,
+                hoursEstimated,
+                completionRate
+        );
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 5. TASK DISTRIBUTION BY TEAM MEMBER (percentages)
+    // ─────────────────────────────────────────────────────────────
+
+    public List<TaskDistributionDTO> getTaskDistribution(Long userId, Long projectId, Long sprintId) {
+        log.info("👥 [ANALYTICS] Computing task distribution for user {}, project={}, sprint={}", userId, projectId, sprintId);
+
+        List<Task> tasks = getFilteredTasks(userId, projectId, sprintId);
 
         // Group by assignee
         Map<String, long[]> byAssignee = new LinkedHashMap<>(); // id → [count]

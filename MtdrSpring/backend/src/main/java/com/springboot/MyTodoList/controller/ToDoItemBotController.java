@@ -1,13 +1,14 @@
 package com.springboot.MyTodoList.controller;
 
 import com.springboot.MyTodoList.config.BotProps;
+import com.springboot.MyTodoList.repository.AppUserRepository;
+import com.springboot.MyTodoList.service.JoinCodeService;
 import com.springboot.MyTodoList.service.DeepSeekService;
 import com.springboot.MyTodoList.service.TaskService;
 import com.springboot.MyTodoList.service.ToDoItemService;
 import com.springboot.MyTodoList.util.BotActions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.BotSession;

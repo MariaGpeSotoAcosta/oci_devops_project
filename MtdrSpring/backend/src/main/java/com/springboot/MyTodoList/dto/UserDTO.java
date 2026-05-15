@@ -6,6 +6,7 @@ public class UserDTO {
     private String id;
     private String name;
     private String email;
+    private String bio;
     private String avatar;
     private String role;
     private Boolean telegramConnected;
@@ -24,6 +25,7 @@ public class UserDTO {
         dto.setEmail(user.getEmail());
         dto.setAvatar(buildAvatar(user.getName()));
         dto.setRole(user.getRole() != null ? user.getRole() : "developer");
+        dto.setBio(user.getBio());
         dto.setTelegramConnected(user.getTelegramConnected() != null ? user.getTelegramConnected() : false);
         dto.setTelegramUsername(user.getTelegramUsername());
         return dto;
@@ -47,6 +49,9 @@ public class UserDTO {
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
+
+    public String getBio() { return bio; }
+    public void setBio(String bio) { this.bio = bio; }
 
     public String getAvatar() { return avatar; }
     public void setAvatar(String avatar) { this.avatar = avatar; }
