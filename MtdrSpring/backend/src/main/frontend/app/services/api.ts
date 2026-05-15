@@ -348,31 +348,37 @@ export interface SprintKpiPoint {
 }
 
 export const analyticsApi = {
-  getVelocity: async (weeks = 8): Promise<VelocityPoint[]> => {
-    const res = await fetch(`${API_BASE_URL}/analytics/velocity?weeks=${weeks}`, {
-      headers: authHeaders(),
-    });
+  getVelocity: async (weeks = 8, projectId?: string, sprintId?: string): Promise<VelocityPoint[]> => {
+    const p = new URLSearchParams({ weeks: String(weeks) });
+    if (projectId) p.set('projectId', projectId);
+    if (sprintId) p.set('sprintId', sprintId);
+    const res = await fetch(`${API_BASE_URL}/analytics/velocity?${p}`, { headers: authHeaders() });
     return handleResponse<VelocityPoint[]>(res);
   },
 
-  getPriorityDistribution: async (): Promise<PriorityPoint[]> => {
-    const res = await fetch(`${API_BASE_URL}/analytics/priority`, {
-      headers: authHeaders(),
-    });
+  getPriorityDistribution: async (projectId?: string, sprintId?: string): Promise<PriorityPoint[]> => {
+    const p = new URLSearchParams();
+    if (projectId) p.set('projectId', projectId);
+    if (sprintId) p.set('sprintId', sprintId);
+    const query = p.toString() ? `?${p}` : '';
+    const res = await fetch(`${API_BASE_URL}/analytics/priority${query}`, { headers: authHeaders() });
     return handleResponse<PriorityPoint[]>(res);
   },
 
-  getWorkedHours: async (weeks = 8): Promise<WorkedHoursPoint[]> => {
-    const res = await fetch(`${API_BASE_URL}/analytics/worked-hours?weeks=${weeks}`, {
-      headers: authHeaders(),
-    });
+  getWorkedHours: async (weeks = 8, projectId?: string, sprintId?: string): Promise<WorkedHoursPoint[]> => {
+    const p = new URLSearchParams({ weeks: String(weeks) });
+    if (projectId) p.set('projectId', projectId);
+    if (sprintId) p.set('sprintId', sprintId);
+    const res = await fetch(`${API_BASE_URL}/analytics/worked-hours?${p}`, { headers: authHeaders() });
     return handleResponse<WorkedHoursPoint[]>(res);
   },
 
-  getTaskDistribution: async (): Promise<TaskDistributionPoint[]> => {
-    const res = await fetch(`${API_BASE_URL}/analytics/task-distribution`, {
-      headers: authHeaders(),
-    });
+  getTaskDistribution: async (projectId?: string, sprintId?: string): Promise<TaskDistributionPoint[]> => {
+    const p = new URLSearchParams();
+    if (projectId) p.set('projectId', projectId);
+    if (sprintId) p.set('sprintId', sprintId);
+    const query = p.toString() ? `?${p}` : '';
+    const res = await fetch(`${API_BASE_URL}/analytics/task-distribution${query}`, { headers: authHeaders() });
     return handleResponse<TaskDistributionPoint[]>(res);
   },
 

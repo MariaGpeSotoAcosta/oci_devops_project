@@ -12,7 +12,7 @@ public class KPIAnalysisService {
     private AnalyticsService analyticsService;
 
     public String getVelocityTrends(Long userId) {
-        List<VelocityDTO> data = analyticsService.getVelocity(userId, 4);
+        List<VelocityDTO> data = analyticsService.getVelocity(userId, 4, null, null);
         if (data.isEmpty()) return "No velocity data available";
         StringBuilder sb = new StringBuilder();
         for (VelocityDTO v : data) {
@@ -23,7 +23,7 @@ public class KPIAnalysisService {
     }
 
     public String getPriorityDistribution(Long userId) {
-        List<PriorityDistributionDTO> data = analyticsService.getPriorityDistribution(userId);
+        List<PriorityDistributionDTO> data = analyticsService.getPriorityDistribution(userId, null, null);
         if (data.isEmpty()) return "No priority data available";
         StringBuilder sb = new StringBuilder();
         for (PriorityDistributionDTO p : data) {
@@ -33,7 +33,7 @@ public class KPIAnalysisService {
     }
 
     public String getWorkloadDistribution(Long userId) {
-        List<TaskDistributionDTO> data = analyticsService.getTaskDistribution(userId);
+        List<TaskDistributionDTO> data = analyticsService.getTaskDistribution(userId, null, null);
         if (data.isEmpty()) return "No workload data available";
         StringBuilder sb = new StringBuilder();
         for (TaskDistributionDTO d : data) {
@@ -44,7 +44,7 @@ public class KPIAnalysisService {
     }
 
     public String getWorkedHours(Long userId) {
-        List<WorkedHoursDTO> data = analyticsService.getWorkedHoursPerUser(userId, 4);
+        List<WorkedHoursDTO> data = analyticsService.getWorkedHoursPerUser(userId, 4, null, null);
         if (data.isEmpty()) return "No worked hours data available";
         StringBuilder sb = new StringBuilder();
         for (WorkedHoursDTO w : data) {

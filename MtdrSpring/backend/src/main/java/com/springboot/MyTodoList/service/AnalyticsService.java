@@ -35,8 +35,19 @@ public class AnalyticsService {
     @Autowired private TeamMembershipRepository membershipRepository;
 
     // ─────────────────────────────────────────────────────────────
-    // SHARED HELPER: fetch all tasks visible to a user's teams
+    // SHARED HELPERS
     // ─────────────────────────────────────────────────────────────
+
+    /** Returns tasks filtered by project+sprint when provided, otherwise all team tasks. */
+    private List<Task> getFilteredTasks(Long userId, Long projectId, Long sprintId) {
+        if (projectId != null && sprintId != null) {
+            return taskRepository.findByProjectIdAndSprintId(projectId, sprintId);
+        }
+        if (projectId != null) {
+            return taskRepository.findByProjectId(projectId);
+        }
+        return getTasksForUser(userId);
+    }
 
     private List<Task> getTasksForUser(Long userId) {
         log.debug("🔍 [LOOKUP] Fetching tasks for user {}", userId);
@@ -87,10 +98,10 @@ public class AnalyticsService {
     // 1. VELOCITY: tasks created vs completed per week
     // ─────────────────────────────────────────────────────────────
 
-    public List<VelocityDTO> getVelocity(Long userId, int weeks) {
-        log.info("🚀 [ANALYTICS] Computing velocity for user {} — last {} weeks", userId, weeks);
+    public List<VelocityDTO> getVelocity(Long userId, int weeks, Long projectId, Long sprintId) {
+        log.info("🚀 [ANALYTICS] Computing velocity for user {} — last {} weeks, project={}, sprint={}", userId, weeks, projectId, sprintId);
 
-        List<Task> tasks = getTasksForUser(userId);
+        List<Task> tasks = getFilteredTasks(userId, projectId, sprintId);
         List<String> weekLabels = lastNWeekLabels(weeks);
 
         // Count created per week
@@ -125,10 +136,10 @@ public class AnalyticsService {
     // 2. PRIORITY DISTRIBUTION
     // ─────────────────────────────────────────────────────────────
 
-    public List<PriorityDistributionDTO> getPriorityDistribution(Long userId) {
-        log.info("🔥 [ANALYTICS] Computing priority distribution for user {}", userId);
+    public List<PriorityDistributionDTO> getPriorityDistribution(Long userId, Long projectId, Long sprintId) {
+        log.info("🔥 [ANALYTICS] Computing priority distribution for user {}, project={}, sprint={}", userId, projectId, sprintId);
 
-        List<Task> tasks = getTasksForUser(userId);
+        List<Task> tasks = getFilteredTasks(userId, projectId, sprintId);
 
         Map<String, Long> counts = tasks.stream()
                 .filter(t -> t.getPriority() != null)
@@ -149,10 +160,10 @@ public class AnalyticsService {
     // 3. WORKED HOURS PER USER PER WEEK
     // ─────────────────────────────────────────────────────────────
 
-    public List<WorkedHoursDTO> getWorkedHoursPerUser(Long userId, int weeks) {
-        log.info("⏱️ [ANALYTICS] Computing worked hours per user for user {} — last {} weeks", userId, weeks);
+    public List<WorkedHoursDTO> getWorkedHoursPerUser(Long userId, int weeks, Long projectId, Long sprintId) {
+        log.info("⏱️ [ANALYTICS] Computing worked hours per user for user {} — last {} weeks, project={}, sprint={}", userId, weeks, projectId, sprintId);
 
-        List<Task> tasks = getTasksForUser(userId);
+        List<Task> tasks = getFilteredTasks(userId, projectId, sprintId);
         List<String> weekLabels = lastNWeekLabels(weeks);
 
         // key: "week|userName" → sum of workedHours
@@ -233,10 +244,10 @@ public class AnalyticsService {
     // 5. TASK DISTRIBUTION BY TEAM MEMBER (percentages)
     // ─────────────────────────────────────────────────────────────
 
-    public List<TaskDistributionDTO> getTaskDistribution(Long userId) {
-        log.info("👥 [ANALYTICS] Computing task distribution for user {}", userId);
+    public List<TaskDistributionDTO> getTaskDistribution(Long userId, Long projectId, Long sprintId) {
+        log.info("👥 [ANALYTICS] Computing task distribution for user {}, project={}, sprint={}", userId, projectId, sprintId);
 
-        List<Task> tasks = getTasksForUser(userId);
+        List<Task> tasks = getFilteredTasks(userId, projectId, sprintId);
 
         // Group by assignee
         Map<String, long[]> byAssignee = new LinkedHashMap<>(); // id → [count]

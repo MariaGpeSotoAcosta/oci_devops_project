@@ -28,11 +28,13 @@ public class AnalyticsController {
     @GetMapping("/velocity")
     public ResponseEntity<List<VelocityDTO>> getVelocity(
             Authentication auth,
-            @RequestParam(defaultValue = "8") int weeks) {
+            @RequestParam(defaultValue = "8") int weeks,
+            @RequestParam(required = false) Long projectId,
+            @RequestParam(required = false) Long sprintId) {
         Long userId = (Long) auth.getPrincipal();
-        log.info("🚀 [REQUEST] GET /analytics/velocity - User: {} - weeks: {}", userId, weeks);
+        log.info("🚀 [REQUEST] GET /analytics/velocity - User: {} - weeks: {}, projectId: {}, sprintId: {}", userId, weeks, projectId, sprintId);
         try {
-            List<VelocityDTO> result = analyticsService.getVelocity(userId, weeks);
+            List<VelocityDTO> result = analyticsService.getVelocity(userId, weeks, projectId, sprintId);
             log.info("✅ [SUCCESS] GET /analytics/velocity - {} data points returned for user {}", result.size(), userId);
             return ResponseEntity.ok(result);
         } catch (RuntimeException e) {
@@ -46,11 +48,14 @@ public class AnalyticsController {
      * Returns task count grouped by priority level.
      */
     @GetMapping("/priority")
-    public ResponseEntity<List<PriorityDistributionDTO>> getPriorityDistribution(Authentication auth) {
+    public ResponseEntity<List<PriorityDistributionDTO>> getPriorityDistribution(
+            Authentication auth,
+            @RequestParam(required = false) Long projectId,
+            @RequestParam(required = false) Long sprintId) {
         Long userId = (Long) auth.getPrincipal();
-        log.info("🚀 [REQUEST] GET /analytics/priority - User: {}", userId);
+        log.info("🚀 [REQUEST] GET /analytics/priority - User: {}, projectId: {}, sprintId: {}", userId, projectId, sprintId);
         try {
-            List<PriorityDistributionDTO> result = analyticsService.getPriorityDistribution(userId);
+            List<PriorityDistributionDTO> result = analyticsService.getPriorityDistribution(userId, projectId, sprintId);
             log.info("✅ [SUCCESS] GET /analytics/priority - {} priority buckets for user {}", result.size(), userId);
             return ResponseEntity.ok(result);
         } catch (RuntimeException e) {
@@ -66,11 +71,13 @@ public class AnalyticsController {
     @GetMapping("/worked-hours")
     public ResponseEntity<List<WorkedHoursDTO>> getWorkedHours(
             Authentication auth,
-            @RequestParam(defaultValue = "8") int weeks) {
+            @RequestParam(defaultValue = "8") int weeks,
+            @RequestParam(required = false) Long projectId,
+            @RequestParam(required = false) Long sprintId) {
         Long userId = (Long) auth.getPrincipal();
-        log.info("🚀 [REQUEST] GET /analytics/worked-hours - User: {} - weeks: {}", userId, weeks);
+        log.info("🚀 [REQUEST] GET /analytics/worked-hours - User: {} - weeks: {}, projectId: {}, sprintId: {}", userId, weeks, projectId, sprintId);
         try {
-            List<WorkedHoursDTO> result = analyticsService.getWorkedHoursPerUser(userId, weeks);
+            List<WorkedHoursDTO> result = analyticsService.getWorkedHoursPerUser(userId, weeks, projectId, sprintId);
             log.info("✅ [SUCCESS] GET /analytics/worked-hours - {} entries for user {}", result.size(), userId);
             return ResponseEntity.ok(result);
         } catch (RuntimeException e) {
@@ -108,11 +115,14 @@ public class AnalyticsController {
      * Returns task count per team member as percentages.
      */
     @GetMapping("/task-distribution")
-    public ResponseEntity<List<TaskDistributionDTO>> getTaskDistribution(Authentication auth) {
+    public ResponseEntity<List<TaskDistributionDTO>> getTaskDistribution(
+            Authentication auth,
+            @RequestParam(required = false) Long projectId,
+            @RequestParam(required = false) Long sprintId) {
         Long userId = (Long) auth.getPrincipal();
-        log.info("🚀 [REQUEST] GET /analytics/task-distribution - User: {}", userId);
+        log.info("🚀 [REQUEST] GET /analytics/task-distribution - User: {}, projectId: {}, sprintId: {}", userId, projectId, sprintId);
         try {
-            List<TaskDistributionDTO> result = analyticsService.getTaskDistribution(userId);
+            List<TaskDistributionDTO> result = analyticsService.getTaskDistribution(userId, projectId, sprintId);
             log.info("✅ [SUCCESS] GET /analytics/task-distribution - {} members for user {}", result.size(), userId);
             return ResponseEntity.ok(result);
         } catch (RuntimeException e) {
