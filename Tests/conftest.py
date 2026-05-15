@@ -38,4 +38,5 @@ def driver():
     )
 
     yield driver
+
     driver.quit()
