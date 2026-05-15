@@ -3,6 +3,7 @@ import pytest
 from dotenv import load_dotenv
 
 from pages.login.LoginFunctions import Login
+from utils.wait_utils import wait_seconds
 
 load_dotenv()
 

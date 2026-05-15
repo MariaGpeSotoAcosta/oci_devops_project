@@ -5,7 +5,9 @@ import { Task, TaskStatus, Project, Sprint } from '../types';
 import { tasksApi } from '../services/api';
 import { TaskColumn } from '../components/TaskColumn';
 import { TaskDialog } from '../components/TaskDialog';
+import { SprintCreateDialog } from '../components/SprintCreateDialog';
 import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -13,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select';
-import { Plus, Kanban, Loader2 } from 'lucide-react';
+import { Plus, Kanban, Loader2, CalendarRange, FolderKanban, ListChecks } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface BoardProps {
@@ -23,7 +25,7 @@ interface BoardProps {
   onUpdateTask: (taskId: string, updates: Partial<Task>) => void;
   onCreateTask: (task: Partial<Task>) => void;
   onDeleteTask?: (taskId: string) => void;
-  currentSprint: { id?: string; name: string; goal: string } | null;
+  onCreateSprint: (sprint: Sprint) => void;
 }
 
 export function Board({
@@ -33,26 +35,55 @@ export function Board({
   onUpdateTask,
   onCreateTask,
   onDeleteTask,
-  currentSprint,
+  onCreateSprint,
 }: BoardProps) {
   // ── Dialog state ───────────────────────────────────────────────
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogTask, setDialogTask] = useState<Task | undefined>();
+  const [dialogOpen, setDialogOpen]       = useState(false);
+  const [dialogTask, setDialogTask]       = useState<Task | undefined>();
   const [isFetchingTask, setIsFetchingTask] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
+  const [isCreating, setIsCreating]       = useState(false);
+  const [sprintDialogOpen, setSprintDialogOpen] = useState(false);
 
   // ── Filter state ───────────────────────────────────────────────
-  const [filterProjectId, setFilterProjectId] = useState<string>('all');
+  const [filterProjectId, setFilterProjectId] = useState<string>(
+    projects.length > 0 ? projects[0].id : '__all'
+  );
+  const [filterSprintId, setFilterSprintId] = useState<string>('__all');
 
-  // ── Project name lookup ────────────────────────────────────────
-  const getProjectName = (projectId: string) =>
-    projects.find((p) => p.id === projectId)?.name;
+  // ── Sprints scoped to selected project ────────────────────────
+  const projectSprints = useMemo(
+    () =>
+      filterProjectId === '__all'
+        ? sprints
+        : sprints.filter((s) => (s as any).projectId === filterProjectId),
+    [sprints, filterProjectId]
+  );
+
+  // Reset sprint filter when project changes
+  const handleProjectChange = (pid: string) => {
+    setFilterProjectId(pid);
+    setFilterSprintId('__all');
+  };
+
+  // ── Active sprint label for the header ───────────────────────
+  const activeSprint = useMemo(
+    () => projectSprints.find((s) => s.id === filterSprintId),
+    [projectSprints, filterSprintId]
+  );
 
   // ── Filtered tasks ─────────────────────────────────────────────
   const visibleTasks = useMemo(() => {
-    if (filterProjectId === 'all') return tasks;
-    return tasks.filter((t) => t.projectId === filterProjectId);
-  }, [tasks, filterProjectId]);
+    let result = tasks;
+    if (filterProjectId !== '__all') {
+      result = result.filter((t) => t.projectId === filterProjectId);
+    }
+    if (filterSprintId === '__backlog') {
+      result = result.filter((t) => !t.sprintId);
+    } else if (filterSprintId !== '__all') {
+      result = result.filter((t) => t.sprintId === filterSprintId);
+    }
+    return result;
+  }, [tasks, filterProjectId, filterSprintId]);
 
   const todoTasks       = visibleTasks.filter((t) => t.status === 'todo');
   const inProgressTasks = visibleTasks.filter((t) => t.status === 'in-progress');
@@ -62,28 +93,25 @@ export function Board({
   const totalHours     = visibleTasks.reduce((s, t) => s + (t.storyPoints || 0), 0);
   const completedHours = doneTasks.reduce((s, t) => s + (t.storyPoints || 0), 0);
 
+  // ── Project name lookup ────────────────────────────────────────
+  const getProjectName = (pid: string) => projects.find((p) => p.id === pid)?.name;
+
   // ── Handlers ──────────────────────────────────────────────────
 
   const handleTaskMove = (taskId: string, newStatus: TaskStatus) => {
     onUpdateTask(taskId, { status: newStatus });
   };
 
-  /**
-   * Clicking a task card: fetch fresh details from GET /tasks/{id},
-   * then open the dialog with up-to-date data.
-   */
   const handleTaskClick = async (task: Task) => {
     setIsCreating(false);
-    setDialogTask(task);      // optimistic: show local copy immediately
+    setDialogTask(task);
     setDialogOpen(true);
     setIsFetchingTask(true);
     try {
       const fresh = await tasksApi.getById(task.id) as unknown as Task;
       setDialogTask(fresh);
-    } catch (err) {
-      // Non-fatal: local copy is still usable
+    } catch {
       toast.error('Could not refresh task details from server');
-      console.error('Failed to fetch task by id:', err);
     } finally {
       setIsFetchingTask(false);
     }
@@ -97,11 +125,8 @@ export function Board({
   };
 
   const handleSave = (taskData: Partial<Task>) => {
-    if (isCreating) {
-      onCreateTask(taskData);
-    } else if (dialogTask) {
-      onUpdateTask(dialogTask.id, taskData);
-    }
+    if (isCreating) onCreateTask(taskData);
+    else if (dialogTask) onUpdateTask(dialogTask.id, taskData);
   };
 
   const handleDelete = (taskId: string) => {
@@ -118,8 +143,9 @@ export function Board({
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="p-6">
-        {/* ── Header ────────────────────────────────────── */}
-        <div className="mb-6">
+
+        {/* ── Header ──────────────────────────────────────── */}
+        <div className="mb-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <Kanban className="w-6 h-6 text-[#30c2b7]" />
@@ -128,39 +154,98 @@ export function Board({
                   Kanban Board
                 </h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {currentSprint
-                    ? `Sprint: ${currentSprint.name}`
-                    : 'All tasks across your projects'}
+                  {activeSprint
+                    ? `${activeSprint.name} · ${activeSprint.status}`
+                    : filterSprintId === '__backlog'
+                    ? 'Backlog (unassigned tasks)'
+                    : 'All tasks'}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              {/* Project filter — only shown when there are 2+ projects */}
-              {projects.length > 1 && (
-                <Select value={filterProjectId} onValueChange={setFilterProjectId}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="All projects" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All projects</SelectItem>
-                    {projects.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-
-              <Button onClick={handleCreateNew}>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSprintDialogOpen(true)}
+                disabled={projects.length === 0}
+              >
+                <CalendarRange className="w-4 h-4 mr-1.5 text-[#30c2b7]" />
+                New Sprint
+              </Button>
+              <Button onClick={handleCreateNew} disabled={projects.length === 0}>
                 <Plus className="w-4 h-4 mr-2" />
                 New Task
               </Button>
             </div>
           </div>
 
-          {/* Stats bar */}
+          {/* ── Project + Sprint + Backlog selectors ─────── */}
+          <div className="flex flex-wrap items-end gap-3 mb-4">
+
+            {/* Project */}
+            <div className="flex-1 min-w-36 max-w-56">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1">
+                <FolderKanban className="w-3 h-3" /> Project
+              </p>
+              <Select value={filterProjectId} onValueChange={handleProjectChange}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all">All projects</SelectItem>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Sprint */}
+            <div className="flex-1 min-w-44 max-w-64">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1">
+                <ListChecks className="w-3 h-3" /> Sprint
+              </p>
+              <Select value={filterSprintId} onValueChange={setFilterSprintId}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all">All sprints</SelectItem>
+                  <SelectItem value="__backlog">📥 Backlog (no sprint)</SelectItem>
+                  {projectSprints.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.status === 'active'
+                        ? '🟢 '
+                        : s.status === 'completed'
+                        ? '✅ '
+                        : '📋 '}
+                      {s.name}
+                      {s.status === 'active' && (
+                        <span className="ml-1 text-xs text-gray-400">(active)</span>
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Sprint status badge */}
+            {activeSprint && (
+              <Badge
+                className={`self-end mb-0.5 text-xs px-2 py-1 capitalize
+                  ${activeSprint.status === 'active'
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                    : activeSprint.status === 'completed'
+                    ? 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
+                    : 'bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'}`}
+              >
+                {activeSprint.status}
+              </Badge>
+            )}
+          </div>
+
+          {/* ── Stats bar ────────────────────────────────── */}
           <div className="flex gap-3 text-sm flex-wrap">
             <div className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg">
               <span className="text-gray-500 dark:text-gray-400">Total: </span>
@@ -188,20 +273,24 @@ export function Board({
           </div>
         </div>
 
-        {/* ── Kanban columns ──────────────────────────── */}
+        {/* ── Kanban columns ──────────────────────────────── */}
         {visibleTasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <Kanban className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-4" />
-            <p className="text-gray-500 dark:text-gray-400 mb-4">
+            <p className="text-gray-500 dark:text-gray-400 mb-2">
               {projects.length === 0
                 ? 'Create a project first, then add tasks to see them here.'
+                : filterSprintId !== '__all' && filterSprintId !== '__backlog'
+                ? 'No tasks in this sprint yet. Add tasks from the Backlog.'
                 : 'No tasks yet. Create your first task to get started.'}
             </p>
             {projects.length > 0 && (
-              <Button onClick={handleCreateNew} variant="outline">
-                <Plus className="w-4 h-4 mr-2" />
-                Create First Task
-              </Button>
+              <div className="flex gap-2 mt-2">
+                <Button onClick={handleCreateNew} variant="outline">
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Task
+                </Button>
+              </div>
             )}
           </div>
         ) : (
@@ -233,9 +322,8 @@ export function Board({
           </div>
         )}
 
-        {/* ── Task Dialog ─────────────────────────────── */}
+        {/* ── Task Dialog ─────────────────────────────────── */}
         {isFetchingTask ? (
-          /* Loading overlay while fetching fresh task details */
           <TaskLoadingDialog open={dialogOpen} onClose={handleClose} />
         ) : (
           <TaskDialog
@@ -248,12 +336,27 @@ export function Board({
             sprints={sprints}
           />
         )}
+
+        {/* ── Sprint Create Dialog ─────────────────────────── */}
+        <SprintCreateDialog
+          open={sprintDialogOpen}
+          onClose={() => setSprintDialogOpen(false)}
+          projects={projects}
+          sprints={sprints}
+          defaultProjectId={filterProjectId === '__all' ? projects[0]?.id : filterProjectId}
+          onCreated={(sprint) => {
+            onCreateSprint(sprint);
+            // Auto-select the new sprint
+            setFilterProjectId((sprint as any).projectId ?? filterProjectId);
+            setFilterSprintId(sprint.id);
+          }}
+        />
       </div>
     </DndProvider>
   );
 }
 
-// ── Tiny loading dialog shown while GET /tasks/{id} is in flight ───────────
+// ── Loading dialog while GET /tasks/{id} is in flight ─────────────────────
 
 function TaskLoadingDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
@@ -262,12 +365,7 @@ function TaskLoadingDialog({ open, onClose }: { open: boolean; onClose: () => vo
         open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
       }`}
     >
-      {/* Overlay */}
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={onClose}
-      />
-      {/* Spinner card */}
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div className="relative bg-white dark:bg-gray-900 rounded-xl shadow-xl p-8 flex flex-col items-center gap-3 z-10">
         <Loader2 className="w-8 h-8 text-[#30c2b7] animate-spin" />
         <p className="text-sm text-gray-500 dark:text-gray-400">Loading task details…</p>

@@ -80,6 +80,30 @@ public class AnalyticsController {
     }
 
     /**
+     * GET /api/analytics/kpis?projectId=1&sprintId=2
+     * Returns KPI summary for a project, optionally scoped to a single sprint:
+     *   totalTasks, completedTasks, totalHoursWorked, totalHoursEstimated, completionRate
+     * sprintId is optional — omit it to aggregate across all sprints in the project.
+     */
+    @GetMapping("/kpis")
+    public ResponseEntity<SprintKpiDTO> getSprintKpis(
+            Authentication auth,
+            @RequestParam Long projectId,
+            @RequestParam(required = false) Long sprintId) {
+        Long userId = (Long) auth.getPrincipal();
+        log.info("🚀 [REQUEST] GET /analytics/kpis - User: {} - projectId: {} - sprintId: {}", userId, projectId, sprintId);
+        try {
+            SprintKpiDTO result = analyticsService.getSprintKpis(userId, projectId, sprintId);
+            log.info("✅ [SUCCESS] GET /analytics/kpis - project: '{}', sprint: '{}', completion: {}%",
+                    result.getProjectName(), result.getSprintName(), result.getCompletionRate());
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            log.error("❌ [ERROR] GET /analytics/kpis - Failed for user {}: {}", userId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
      * GET /api/analytics/task-distribution
      * Returns task count per team member as percentages.
      */

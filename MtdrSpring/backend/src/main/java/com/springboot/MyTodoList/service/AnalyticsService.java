@@ -3,11 +3,13 @@ package com.springboot.MyTodoList.service;
 import com.springboot.MyTodoList.dto.*;
 import com.springboot.MyTodoList.model.AppUser;
 import com.springboot.MyTodoList.model.Project;
+import com.springboot.MyTodoList.model.Sprint;
 import com.springboot.MyTodoList.model.Task;
 import com.springboot.MyTodoList.model.Team;
 import com.springboot.MyTodoList.model.TeamMembership;
 import com.springboot.MyTodoList.repository.AppUserRepository;
 import com.springboot.MyTodoList.repository.ProjectRepository;
+import com.springboot.MyTodoList.repository.SprintRepository;
 import com.springboot.MyTodoList.repository.TaskRepository;
 import com.springboot.MyTodoList.repository.TeamMembershipRepository;
 import org.slf4j.Logger;
@@ -28,6 +30,7 @@ public class AnalyticsService {
 
     @Autowired private TaskRepository taskRepository;
     @Autowired private ProjectRepository projectRepository;
+    @Autowired private SprintRepository sprintRepository;
     @Autowired private AppUserRepository userRepository;
     @Autowired private TeamMembershipRepository membershipRepository;
 
@@ -180,7 +183,54 @@ public class AnalyticsService {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 4. TASK DISTRIBUTION BY TEAM MEMBER (percentages)
+    // 4. SPRINT KPIs: hours worked, tasks completed, completion rate
+    //    Filters: projectId (required), sprintId (optional)
+    // ─────────────────────────────────────────────────────────────
+
+    public SprintKpiDTO getSprintKpis(Long userId, Long projectId, Long sprintId) {
+        log.info("📊 [ANALYTICS] Computing sprint KPIs - user: {}, project: {}, sprint: {}", userId, projectId, sprintId);
+
+        // Validate the project exists and the user has access (belongs to a team that owns it)
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Project not found: " + projectId));
+
+        List<Task> tasks;
+        String sprintName = "All Sprints";
+
+        if (sprintId != null) {
+            Sprint sprint = sprintRepository.findById(sprintId)
+                    .orElseThrow(() -> new RuntimeException("Sprint not found: " + sprintId));
+            sprintName = sprint.getName();
+            tasks = taskRepository.findByProjectIdAndSprintId(projectId, sprintId);
+        } else {
+            tasks = taskRepository.findByProjectId(projectId);
+        }
+
+        int totalTasks      = tasks.size();
+        int completedTasks  = (int) tasks.stream().filter(t -> "done".equals(t.getStatus())).count();
+        int hoursWorked     = tasks.stream().mapToInt(t -> t.getWorkedHours()  != null ? t.getWorkedHours()  : 0).sum();
+        int hoursEstimated  = tasks.stream().mapToInt(t -> t.getStoryPoints()  != null ? t.getStoryPoints()  : 0).sum();
+        double completionRate = totalTasks == 0 ? 0.0
+                : Math.round((completedTasks * 100.0 / totalTasks) * 10.0) / 10.0;
+
+        log.info("✅ [ANALYTICS] Sprint KPIs — project: '{}', sprint: '{}', tasks: {}/{}, hours: {}h worked / {}h estimated",
+                project.getName(), sprintName, completedTasks, totalTasks, hoursWorked, hoursEstimated);
+
+        return new SprintKpiDTO(
+                sprintId != null ? sprintId.toString() : null,
+                sprintName,
+                projectId.toString(),
+                project.getName(),
+                totalTasks,
+                completedTasks,
+                hoursWorked,
+                hoursEstimated,
+                completionRate
+        );
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 5. TASK DISTRIBUTION BY TEAM MEMBER (percentages)
     // ─────────────────────────────────────────────────────────────
 
     public List<TaskDistributionDTO> getTaskDistribution(Long userId) {
