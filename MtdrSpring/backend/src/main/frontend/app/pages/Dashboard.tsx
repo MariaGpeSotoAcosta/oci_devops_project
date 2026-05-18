@@ -606,7 +606,7 @@ formatter={(val: number, name: string) => [val, name]}                  />
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Clock className="w-4 h-4 text-indigo-500" />
+              <Clock className="w-4 h-4 text-indigo-800" />
               Worked Hours per Team Member
               <Badge variant="outline" className="text-xs ml-auto font-normal text-gray-500">Stacked by week</Badge>
             </CardTitle>

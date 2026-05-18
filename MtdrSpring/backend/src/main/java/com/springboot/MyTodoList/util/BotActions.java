@@ -8,8 +8,11 @@ import com.springboot.MyTodoList.service.ToDoItemService;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
+import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 public class BotActions {
@@ -82,6 +85,26 @@ public class BotActions {
         return sessions.computeIfAbsent(chatId, k -> new UserSession());
     }
 
+    private void send(String message) {
+        BotHelper.sendMessageToTelegram(chatId, message, telegramClient, null);
+    }
+
+    private void sendKb(String message, ReplyKeyboardMarkup keyboard) {
+        BotHelper.sendMessageToTelegram(chatId, message, telegramClient, keyboard);
+    }
+
+    private ReplyKeyboardMarkup buildStatusKeyboard() {
+        KeyboardRow row = new KeyboardRow();
+        row.add("todo");
+        row.add("in-progress");
+        row.add("done");
+        return ReplyKeyboardMarkup.builder()
+                .keyboard(Arrays.asList(row))
+                .resizeKeyboard(true)
+                .oneTimeKeyboard(true)
+                .build();
+    }
+
     public void fnListMyTasks() {
         if (!(requestText.equals(BotCommands.MY_TASKS.getCommand())) || exit)
             return;
@@ -135,6 +158,8 @@ public class BotActions {
                 return false;
         }
         return true;
+        }
+        return false;
     }
 
     /**
